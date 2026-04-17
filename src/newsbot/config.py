@@ -1,0 +1,92 @@
+"""Environment variable management via pydantic-settings — single source of truth for the whole pipeline."""
+
+from functools import lru_cache
+
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    # required API keys
+    anthropic_api_key: str = Field(default="", description="Anthropic API key (not required when mock_claude=true)")
+    google_api_key: str = Field(default="", description="Gemini Imagen 3 (thumbnails, Phase 2)")
+
+    # optional keys
+    tavily_api_key: str = Field(default="", description="Tavily web search helper")
+
+    # X (Twitter)
+    twitter_bearer_token: str = Field(default="")
+    twitter_api_key: str = Field(default="")
+    twitter_api_secret: str = Field(default="")
+    twitter_access_token: str = Field(default="")
+    twitter_access_secret: str = Field(default="")
+
+    # Substack
+    substack_email: str = Field(default="")
+    substack_password: str = Field(default="")
+    substack_publication_url: str = Field(default="")
+
+    # WhatsApp Business Cloud API
+    whatsapp_token: str = Field(default="")
+    whatsapp_phone_number_id: str = Field(default="")
+    whatsapp_group_id: str = Field(default="")
+
+    # behaviour settings
+    content_topic: str = Field(default="AI/ML")
+    items_per_report: int = Field(default=6, ge=1, le=20)
+    items_per_weekly: int = Field(default=12, ge=1, le=30)
+    quality_min_score: float = Field(default=0.8, ge=0.0, le=1.0)
+    dedup_similarity_threshold: float = Field(default=0.92, ge=0.0, le=1.0)
+    default_language: str = Field(default="ko")
+    enable_multilingual: bool = Field(default=False)
+    dry_run: bool = Field(default=False)
+    mock_claude: bool = Field(default=False, description="Run the full pipeline with mock responses instead of calling the API")
+    log_level: str = Field(default="INFO")
+
+    @field_validator("default_language")
+    @classmethod
+    def validate_language(cls, v: str) -> str:
+        if v not in ("ko", "en"):
+            raise ValueError(f"default_language must be 'ko' or 'en', got '{v}'")
+        return v
+
+    @field_validator("log_level")
+    @classmethod
+    def validate_log_level(cls, v: str) -> str:
+        valid = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+        upper = v.upper()
+        if upper not in valid:
+            raise ValueError(f"log_level must be one of {valid}, got '{v}'")
+        return upper
+
+    # convenience properties
+    @property
+    def twitter_configured(self) -> bool:
+        return all([
+            self.twitter_bearer_token,
+            self.twitter_api_key,
+            self.twitter_api_secret,
+            self.twitter_access_token,
+            self.twitter_access_secret,
+        ])
+
+    @property
+    def substack_configured(self) -> bool:
+        return all([self.substack_email, self.substack_password, self.substack_publication_url])
+
+    @property
+    def whatsapp_configured(self) -> bool:
+        return all([self.whatsapp_token, self.whatsapp_phone_number_id, self.whatsapp_group_id])
+
+
+@lru_cache(maxsize=1)
+def get_settings() -> Settings:
+    """Return the singleton Settings instance. Clear lru_cache and re-call in tests."""
+    return Settings()
