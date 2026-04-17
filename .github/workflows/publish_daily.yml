@@ -1,0 +1,85 @@
+name: Publish Daily (X + GitHub Archive)
+
+on:
+  schedule:
+    # KST 08:00 = UTC 23:00 (전날)
+    - cron: "0 23 * * *"
+    # KST 13:00 = UTC 04:00
+    - cron: "0 4 * * *"
+    # KST 20:00 = UTC 11:00
+    - cron: "0 11 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "DRY_RUN 모드로 실행 (실제 게시 없음)"
+        type: boolean
+        default: true
+
+# 동시 실행 방지 — DB 캐시 충돌 방지 (ADR-002)
+concurrency:
+  group: publish-daily
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      # sentence-transformers 모델 캐시 (~80MB, 첫 실행만 다운로드)
+      - name: Cache HuggingFace models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-models-all-MiniLM-L6-v2
+          restore-keys: hf-models-
+
+      # newsbot.db 영속성 (ADR-002)
+      # restore-keys로 항상 가장 최근 캐시를 복원
+      - name: Restore newsbot DB
+        uses: actions/cache@v4
+        with:
+          path: data/newsbot.db
+          key: newsbot-db-${{ github.run_id }}
+          restore-keys: newsbot-db-
+
+      - name: Create data directory
+        run: mkdir -p data
+
+      - name: Run pipeline
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          TWITTER_BEARER_TOKEN: ${{ secrets.TWITTER_BEARER_TOKEN }}
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_SECRET }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # workflow_dispatch dry_run 입력 우선, 없으면 false
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          CONTENT_TOPIC: "AI/ML"
+          ITEMS_PER_REPORT: "6"
+          QUALITY_MIN_SCORE: "0.8"
+          DEDUP_SIMILARITY_THRESHOLD: "0.92"
+          DEFAULT_LANGUAGE: "ko"
+          LOG_LEVEL: "INFO"
+        run: uv run python scripts/run_pipeline.py

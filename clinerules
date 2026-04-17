@@ -1,0 +1,127 @@
+# .clinerules
+# Cline / Cursor / Claude Code 등 AI 에이전트가 따르는 행동 규칙.
+# 코드 작성 전 이 파일을 먼저 읽을 것.
+
+---
+
+## 절대 금지
+
+- 프롬프트를 Python 코드 안에 인라인 문자열로 작성하지 않는다.
+  → 반드시 `src/newsbot/generation/prompts/*.md` 파일로 분리.
+
+- API 키, 토큰, 비밀값을 코드에 하드코딩하지 않는다.
+  → 환경변수로만. `.env.example`에 키 이름만 남긴다.
+
+- 외부 API 호출을 `try/except` 없이 작성하지 않는다.
+  → 모든 외부 호출은 실패해도 파이프라인이 계속 돌아야 한다.
+
+- `pip install`을 사용하지 않는다. → `uv add`를 사용한다.
+
+- 테스트 없이 Distribution Layer(실제 배포) 코드를 실행하지 않는다.
+  → 반드시 `DRY_RUN=true`로 먼저 검증.
+
+---
+
+## 코드 작성 규칙
+
+### 타입
+- 모든 함수 시그니처에 타입 힌트 필수.
+- 반환 타입 생략 금지.
+
+```python
+# Good
+async def collect(self) -> list[RawItem]: ...
+
+# Bad
+async def collect(self): ...
+```
+
+### 비동기
+- 수집기(Collection), 원문 fetch(Generation)는 반드시 `async`.
+- 여러 수집기는 `asyncio.gather()`로 병렬 실행. 순차 실행 금지.
+
+```python
+# Good
+results = await asyncio.gather(*[c.collect() for c in collectors], return_exceptions=True)
+
+# Bad
+for collector in collectors:
+    results += await collector.collect()
+```
+
+### 에러 핸들링
+- 개별 수집기 실패는 전체 파이프라인을 멈추지 않는다.
+- `return_exceptions=True`로 gather하고, Exception 타입은 로그만 남기고 스킵.
+
+```python
+for result in results:
+    if isinstance(result, Exception):
+        logger.warning(f"Collector failed: {result}")
+        continue
+    items.extend(result)
+```
+
+### DRY_RUN 모드
+- Distribution Layer의 모든 Publisher는 `DRY_RUN=true` 시 실제 API 호출 없이 로그만 출력.
+- `config.dry_run`을 체크하는 조건문을 publish 메서드 상단에 반드시 추가.
+
+```python
+def publish(self, report: Report) -> None:
+    if self.config.dry_run:
+        logger.info(f"[DRY_RUN] Would publish to X: {report.report_id}")
+        return
+    # 실제 API 호출
+```
+
+---
+
+## 파일 수정 규칙
+
+### 프롬프트 변경
+- `prompts/*.md` 파일만 수정. Python 코드 건드리지 않는다.
+- 프롬프트 변경 후 반드시 `DRY_RUN=true`로 생성 결과 확인.
+
+### 새 수집기 추가
+1. `src/newsbot/collection/` 아래 새 파일 생성
+2. `BaseCollector` 상속, `async collect() -> list[RawItem]` 구현
+3. `registry.py`에 등록
+4. `tests/test_collection.py`에 테스트 추가
+
+### 새 배포 채널 추가
+1. `src/newsbot/formatting/` 아래 포맷터 추가
+2. `src/newsbot/distribution/` 아래 퍼블리셔 추가
+3. `.env.example`에 필요한 환경변수 추가
+4. `DECISIONS.md`에 채널 추가 결정 이유 기록
+
+---
+
+## 커밋 메시지 규칙
+
+```
+feat: 새 기능
+fix: 버그 수정
+refactor: 동작 변경 없는 코드 개선
+prompt: prompts/*.md 변경
+docs: 문서 변경 (CLAUDE.md, DECISIONS.md, TASK.md 등)
+test: 테스트 추가/수정
+chore: 설정, 의존성 변경
+```
+
+예시:
+```
+feat: add Reddit collector with PRAW
+prompt: improve analyzer.md implications section
+fix: handle ArXiv API timeout gracefully
+```
+
+---
+
+## 작업 완료 체크리스트
+
+새 기능 추가 후:
+- [ ] 타입 힌트 있는가
+- [ ] `try/except` 있는가
+- [ ] `DRY_RUN` 분기 있는가 (Distribution만)
+- [ ] 단위 테스트 작성했는가
+- [ ] `TASK.md` 체크박스 업데이트했는가
+- [ ] 설계 결정이 있었다면 `DECISIONS.md`에 기록했는가
