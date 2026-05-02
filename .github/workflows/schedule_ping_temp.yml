@@ -2,8 +2,7 @@ name: Schedule Ping Temp
 
 on:
   schedule:
-    - cron: "30 23 * * *"
-      timezone: "Europe/Berlin"
+    - cron: "30 21 * * *" # 23:30 CEST (UTC+2) — timezone 필드 미지원으로 UTC 직접 지정
   workflow_dispatch:
 
 jobs:

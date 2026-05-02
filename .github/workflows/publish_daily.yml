@@ -5,20 +5,15 @@ env:
 
 on:
   schedule:
-    # GitHub Actions schedule은 정각(:00) 부근에 지연/드롭될 수 있어
-    # 08:07 / 13:07 / 20:07 Europe/Berlin으로 직접 스케줄한다.
-    - cron: "7 8 * * *"
-      timezone: "Europe/Berlin"
-    - cron: "7 13 * * *"
-      timezone: "Europe/Berlin"
-    - cron: "30 23 * * *"
-      timezone: "Europe/Berlin"
+    - cron: "7 6 * * *"   # 08:07 CEST
+    - cron: "7 11 * * *"  # 13:07 CEST
+    - cron: "45 21 * * *" # 23:45 CEST
   workflow_dispatch:
     inputs:
       dry_run:
         description: "DRY_RUN 모드로 실행 (실제 게시 없음)"
         type: boolean
-        default: true
+        default: false
       analysis_mode:
         description: "LLM 분석 모드 (light=기본 저비용, detail=상세 분석)"
         type: choice
@@ -57,15 +52,15 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v5
         with:
           version: "latest"
           enable-cache: false
@@ -75,7 +70,7 @@ jobs:
 
       # sentence-transformers 모델 캐시 (~80MB, 첫 실행만 다운로드)
       - name: Cache HuggingFace models
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         continue-on-error: true
         with:
           path: ~/.cache/huggingface
@@ -85,7 +80,7 @@ jobs:
       # newsbot.db 영속성 (ADR-002)
       # restore-keys로 항상 가장 최근 캐시를 복원
       - name: Restore newsbot DB
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         continue-on-error: true
         with:
           path: data/newsbot.db

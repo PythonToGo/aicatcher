@@ -48,11 +48,12 @@ class GitHubMarkdownPublisher(BasePublisher):
         self._repo_url = repo_url
         self._owner, self._repo = _parse_repo(repo_url)
         self._branch = branch
+        # GITHUB_TOKEN is intentionally excluded: it only has access to the
+        # current repository and will always fail for cross-repo archives.
         self._token = (
             token
             or os.environ.get("ARCHIVE_GITHUB_TOKEN", "")
             or os.environ.get("GITHUB_ARCHIVE_TOKEN", "")
-            or os.environ.get("GITHUB_TOKEN", "")
         )
         self._dry_run = dry_run
 
@@ -108,13 +109,22 @@ class GitHubMarkdownPublisher(BasePublisher):
             "X-GitHub-Api-Version": "2022-11-28",
         }
         content = build_report_md(report).encode("utf-8")
-        payload = {
+        payload: dict = {
             "message": f"archive: {report.report_id} {report.headline}",
             "content": base64.b64encode(content).decode("ascii"),
             "branch": self._branch,
         }
 
         with httpx.Client(timeout=15.0) as client:
+            # If the file already exists (e.g. re-run within the same minute),
+            # the GitHub API requires the current file's sha to overwrite it.
+            get_resp = client.get(url, headers=headers, params={"ref": self._branch})
+            if get_resp.status_code == 200:
+                existing_sha = get_resp.json().get("sha", "")
+                if existing_sha:
+                    payload["sha"] = existing_sha
+                    logger.info("[github] file already exists — overwriting with sha %s", existing_sha[:7])
+
             resp = client.put(url, json=payload, headers=headers)
             resp.raise_for_status()
             data = resp.json()

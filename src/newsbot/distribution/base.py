@@ -23,8 +23,8 @@ class BasePublisher(ABC):
         ...
 
     @abstractmethod
-    def publish(self, report: Report) -> None:
-        """Publish the report to the target channel."""
+    def publish(self, report: Report) -> bool:
+        """Publish the report to the target channel. Returns True on success."""
         ...
 
     def _log_dry_run(self, report: Report) -> None:
