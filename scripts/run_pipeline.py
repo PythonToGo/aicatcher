@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from newsbot.collection.registry import build_default_registry
 from newsbot.config import get_settings
 from newsbot.dedup.store import DeduplicationStore
-from newsbot.distribution.github_issue import GitHubIssuePublisher
+from newsbot.distribution.github_markdown import GitHubMarkdownPublisher
 from newsbot.distribution.twitter_pub import TwitterPublisher
 from newsbot.generation.analyzer import Analyzer
 from newsbot.generation.fetcher import Fetcher
@@ -161,12 +161,15 @@ async def run_pipeline() -> Report:
     else:
         logger.info("twitter not configured, skipping")
 
-    # Archive to a GitHub Issue only when GITHUB_TOKEN is available.
-    gh_repo = "PythonToGo/ai-catcher"
-    gh_publisher = GitHubIssuePublisher(repo=gh_repo, dry_run=settings.dry_run)
+    gh_publisher = GitHubMarkdownPublisher(
+        repo_url=settings.github_archive_repo_url,
+        branch=settings.github_archive_branch,
+        token=settings.github_archive_token,
+        dry_run=settings.dry_run,
+    )
     try:
         gh_publisher.publish(report)
-        published_channels.append("github_issue")
+        published_channels.append("github_markdown")
     except Exception as exc:
         err = f"github archive failed: {exc}"
         logger.warning(err)

@@ -7,7 +7,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from newsbot.distribution.github_issue import GitHubIssuePublisher, _format_issue_body
+from newsbot.distribution.github_markdown import (
+    GitHubMarkdownPublisher,
+    _build_archive_path,
+    _parse_repo,
+)
 from newsbot.distribution.twitter_pub import TwitterPublisher
 from newsbot.formatting.twitter import (
     TwitterFormatter,
@@ -165,30 +169,28 @@ class TestTwitterFormatter:
         assert len(tweets) >= 1
 
 
-# ── GitHubIssuePublisher ──────────────────────────────────────────────────────
+# ── GitHubMarkdownPublisher ───────────────────────────────────────────────────
 
-class TestFormatIssueBody:
-    def test_contains_headline(self) -> None:
+class TestGitHubMarkdownHelpers:
+    def test_parse_ssh_repo_url(self) -> None:
+        owner, repo = _parse_repo("git@github.com:PythonToGo/ai-newletter.git")
+        assert owner == "PythonToGo"
+        assert repo == "ai-newletter"
+
+    def test_build_archive_path(self) -> None:
         report = _make_report()
-        body = _format_issue_body(report)
-        assert report.headline in body
-
-    def test_contains_all_item_titles(self) -> None:
-        report = _make_report(n_items=3)
-        body = _format_issue_body(report)
-        for item in report.items:
-            assert item.title in body
-
-    def test_contains_report_id(self) -> None:
-        report = _make_report()
-        body = _format_issue_body(report)
-        assert report.report_id in body
+        path = _build_archive_path(report)
+        assert path == "news/2026/04/17/20260417-0800-ko.md"
 
 
-class TestGitHubIssuePublisher:
+class TestGitHubMarkdownPublisher:
     def test_dry_run_does_not_call_api(self) -> None:
         report = _make_report()
-        publisher = GitHubIssuePublisher(repo="owner/repo", token="tok", dry_run=True)
+        publisher = GitHubMarkdownPublisher(
+            repo_url="git@github.com:owner/repo.git",
+            token="tok",
+            dry_run=True,
+        )
 
         with patch("httpx.Client") as mock_cls:
             publisher.publish(report)
@@ -196,7 +198,11 @@ class TestGitHubIssuePublisher:
 
     def test_skips_when_no_token(self) -> None:
         report = _make_report()
-        publisher = GitHubIssuePublisher(repo="owner/repo", token="", dry_run=False)
+        publisher = GitHubMarkdownPublisher(
+            repo_url="git@github.com:owner/repo.git",
+            token="",
+            dry_run=False,
+        )
 
         with patch("httpx.Client") as mock_cls:
             publisher.publish(report)
@@ -204,25 +210,30 @@ class TestGitHubIssuePublisher:
 
     def test_calls_api_with_correct_endpoint(self) -> None:
         report = _make_report()
-        publisher = GitHubIssuePublisher(repo="owner/repo", token="mytoken", dry_run=False)
+        publisher = GitHubMarkdownPublisher(
+            repo_url="git@github.com:owner/repo.git",
+            token="mytoken",
+            dry_run=False,
+        )
 
         mock_resp = MagicMock()
         mock_resp.raise_for_status = MagicMock()
-        mock_resp.json.return_value = {"html_url": "https://github.com/owner/repo/issues/1"}
+        mock_resp.json.return_value = {"commit": {"html_url": "https://github.com/owner/repo/commit/abc"}}
 
         with patch("httpx.Client") as mock_cls:
             mock_client = MagicMock()
             mock_client.__enter__ = MagicMock(return_value=mock_client)
             mock_client.__exit__ = MagicMock(return_value=False)
-            mock_client.post.return_value = mock_resp
+            mock_client.put.return_value = mock_resp
             mock_cls.return_value = mock_client
 
             publisher.publish(report)
 
-            call_args = mock_client.post.call_args
-            assert "owner/repo/issues" in call_args[0][0]
+            call_args = mock_client.put.call_args
+            assert "owner/repo/contents/news/2026/04/17/20260417-0800-ko.md" in call_args[0][0]
             payload = call_args[1]["json"]
-            assert report.headline in payload["title"]
+            assert payload["branch"] == "main"
+            assert "archive: 20260417-0800" in payload["message"]
 
 
 # ── TwitterPublisher ──────────────────────────────────────────────────────────

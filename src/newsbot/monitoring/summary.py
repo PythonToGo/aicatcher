@@ -98,7 +98,7 @@ def save_report(report: Report, tweets: list[str] | None = None) -> Path:
 
     # ── Full report markdown ──
     md_path = _REPORTS_DIR / f"{report.report_id}-{lang}.md"
-    md_content = _build_report_md(report)
+    md_content = build_report_md(report)
     md_path.write_text(md_content, encoding="utf-8")
     logger.info("[save] report → %s", md_path)
 
@@ -111,7 +111,7 @@ def save_report(report: Report, tweets: list[str] | None = None) -> Path:
     return md_path
 
 
-def _build_report_md(report: Report) -> str:
+def build_report_md(report: Report) -> str:
     lines = [
         f"# {report.headline}",
         f"",

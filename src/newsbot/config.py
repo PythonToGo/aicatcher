@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     whatsapp_phone_number_id: str = Field(default="")
     whatsapp_group_id: str = Field(default="")
 
+    # GitHub archive repo
+    github_archive_repo_url: str = Field(default="git@github.com:PythonToGo/ai-newletter.git")
+    github_archive_branch: str = Field(default="main")
+    github_archive_token: str = Field(default="")
+
     # behaviour settings
     content_topic: str = Field(default="AI/ML")
     items_per_report: int = Field(default=6, ge=1, le=20)
