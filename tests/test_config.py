@@ -16,6 +16,8 @@ class TestSettings:
         assert s.dry_run is False
         assert s.default_language == "ko"
         assert s.items_per_report == 6
+        assert s.anthropic_main_model == "claude-sonnet-4-6"
+        assert s.anthropic_quality_model == "claude-haiku-4-5-20251001"
 
     def test_dry_run_flag(self) -> None:
         s = Settings(**REQUIRED_ENV, dry_run=True)

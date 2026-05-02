@@ -23,7 +23,13 @@ _MODEL = "claude-sonnet-4-6"
 _TEMPERATURE = 0.7
 _DEFAULT_HOURS_BACK = 24
 _DETAIL_MAX_TOKENS = 2048
-_LIGHT_MAX_TOKENS = 900
+_LIGHT_MAX_TOKENS = 1400
+_MAX_PARSE_RETRIES = 1
+_RETRY_SUFFIX = (
+    "\n\nIMPORTANT: Your previous response was not valid complete JSON. "
+    "Reply again with only one complete JSON object. Keep the headline under 40 characters "
+    "and the trend_analysis concise while still complete."
+)
 
 
 def _load_prompt() -> str:
@@ -34,7 +40,7 @@ def _truncate(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
-def _items_to_json(items: list[AnalyzedItem], mode: str) -> str:
+def _items_to_json(items: list[AnalyzedItem], mode: str = "detail") -> str:
     """Serialize analyzed items into prompt-ready JSON."""
     if mode == "light":
         payload = [
@@ -63,7 +69,7 @@ def _items_to_json(items: list[AnalyzedItem], mode: str) -> str:
     return json.dumps(payload, ensure_ascii=False, indent=2)
 
 
-def _build_prompt(items: list[AnalyzedItem], hours_back: int, mode: str) -> str:
+def _build_prompt(items: list[AnalyzedItem], hours_back: int, mode: str = "detail") -> str:
     template = _load_prompt()
     return (
         template
@@ -116,24 +122,7 @@ class Synthesizer:
             raise ValueError("cannot synthesize an empty item list")
 
         prompt = _build_prompt(items, self._hours_back, self._mode)
-        try:
-            message = await self._client.messages.create(
-                model=self._model,
-                max_tokens=self._max_tokens,
-                temperature=_TEMPERATURE,
-                messages=[{"role": "user", "content": prompt}],
-            )
-        except anthropic.APIError as exc:
-            logger.warning("[synthesizer] API error: %s", exc)
-            raise
-
-        raw_text = message.content[0].text
-        try:
-            data = _parse_response(raw_text)
-            _validate_synthesis(data)
-        except (json.JSONDecodeError, ValueError) as exc:
-            logger.warning("[synthesizer] invalid response: %s | raw: %s", exc, raw_text[:200])
-            raise ValueError(f"invalid synthesizer response: {exc}") from exc
+        data = await self._request_valid_synthesis(prompt)
 
         rid = report_id or _make_report_id()
         logger.info("[synthesizer] created report %s with %d items", rid, len(items))
@@ -144,3 +133,34 @@ class Synthesizer:
             trend_analysis=str(data["trend_analysis"]),
             language=language,
         )
+
+    async def _request_valid_synthesis(self, prompt: str) -> dict:
+        current_prompt = prompt
+        for attempt in range(_MAX_PARSE_RETRIES + 1):
+            try:
+                message = await self._client.messages.create(
+                    model=self._model,
+                    max_tokens=self._max_tokens,
+                    temperature=_TEMPERATURE,
+                    messages=[{"role": "user", "content": current_prompt}],
+                )
+            except anthropic.APIError as exc:
+                logger.warning("[synthesizer] API error: %s", exc)
+                raise
+
+            raw_text = message.content[0].text
+            try:
+                data = _parse_response(raw_text)
+                _validate_synthesis(data)
+                return data
+            except (json.JSONDecodeError, ValueError) as exc:
+                logger.warning(
+                    "[synthesizer] invalid response (attempt %d/%d): %s | raw: %s",
+                    attempt + 1,
+                    _MAX_PARSE_RETRIES + 1,
+                    exc,
+                    raw_text[:200],
+                )
+                if attempt >= _MAX_PARSE_RETRIES:
+                    raise ValueError(f"invalid synthesizer response: {exc}") from exc
+                current_prompt = prompt + _RETRY_SUFFIX

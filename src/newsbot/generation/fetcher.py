@@ -46,6 +46,25 @@ def _should_skip(url: str) -> bool:
         return False
 
 
+def _extract_text(html: bytes, max_content_length: int = 4000) -> str:
+    """Extract the main body text from HTML."""
+    soup = BeautifulSoup(html, "lxml")
+
+    # remove noise elements
+    for tag in soup(["script", "style", "nav", "header", "footer", "aside", "form"]):
+        tag.decompose()
+
+    # prefer <article> / <main> over <body>
+    for selector in ("article", "main", "[role=main]", "body"):
+        el = soup.select_one(selector)
+        if el:
+            text = el.get_text(separator=" ", strip=True)
+            if len(text) > 200:
+                return text[:max_content_length]
+
+    return soup.get_text(separator=" ", strip=True)[:max_content_length]
+
+
 class Fetcher:
     """Fetches full article text for a list of ScoredItems in parallel."""
 
@@ -67,21 +86,7 @@ class Fetcher:
 
     def _extract_text(self, html: bytes) -> str:
         """Extract body text from HTML."""
-        soup = BeautifulSoup(html, "lxml")
-
-        # remove noise elements
-        for tag in soup(["script", "style", "nav", "header", "footer", "aside", "form"]):
-            tag.decompose()
-
-        # prefer <article> / <main> over <body>
-        for selector in ("article", "main", "[role=main]", "body"):
-            el = soup.select_one(selector)
-            if el:
-                text = el.get_text(separator=" ", strip=True)
-                if len(text) > 200:
-                    return text[: self._max_content_length]
-
-        return soup.get_text(separator=" ", strip=True)[: self._max_content_length]
+        return _extract_text(html, max_content_length=self._max_content_length)
 
     async def _fetch_one(self, item: ScoredItem) -> None:
         """Write item.full_article on success; keep raw.body on failure."""

@@ -268,6 +268,21 @@ class TestAnalyzer:
         assert results[0].limitations == "자동 분석 실패 — 내용이 불완전할 수 있습니다."
 
     @pytest.mark.asyncio
+    async def test_analyze_retries_after_invalid_json(self) -> None:
+        analyzer = Analyzer(api_key="test-key")
+        item = _make_scored()
+
+        with patch.object(analyzer._client.messages, "create", new_callable=AsyncMock) as mock_c:
+            mock_c.side_effect = [
+                _make_api_message("bad response"),
+                _make_api_message(_valid_analysis_json()),
+            ]
+            results = await analyzer.analyze_all([item])
+
+        assert results[0].summary_ko != ""
+        assert mock_c.await_count == 2
+
+    @pytest.mark.asyncio
     async def test_analyze_all_empty(self) -> None:
         analyzer = Analyzer(api_key="test-key")
         results = await analyzer.analyze_all([])
@@ -357,6 +372,20 @@ class TestSynthesizer:
             mock_c.return_value = _make_api_message("bad response")
             with pytest.raises(ValueError, match="invalid synthesizer response"):
                 await synth.synthesize([_make_analyzed()])
+
+    @pytest.mark.asyncio
+    async def test_synthesize_retries_after_invalid_json(self) -> None:
+        synth = Synthesizer(api_key="test-key")
+
+        with patch.object(synth._client.messages, "create", new_callable=AsyncMock) as mock_c:
+            mock_c.side_effect = [
+                _make_api_message("bad response"),
+                _make_api_message(_valid_synthesis_json()),
+            ]
+            report = await synth.synthesize([_make_analyzed()])
+
+        assert report.headline == "추론 비용 전쟁이 시작됐다"
+        assert mock_c.await_count == 2
 
     @pytest.mark.asyncio
     async def test_synthesize_language_passed_to_report(self) -> None:

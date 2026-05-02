@@ -47,10 +47,12 @@ async def run_pipeline() -> Report:
     logger = logging.getLogger(__name__)
 
     logger.info(
-        "=== newsbot pipeline start | DRY_RUN=%s MOCK_CLAUDE=%s ANALYSIS_MODE=%s ===",
+        "=== newsbot pipeline start | DRY_RUN=%s MOCK_CLAUDE=%s ANALYSIS_MODE=%s MAIN_MODEL=%s QUALITY_MODEL=%s ===",
         settings.dry_run,
         settings.mock_claude,
         settings.analysis_mode,
+        settings.anthropic_main_model,
+        settings.anthropic_quality_model,
     )
     errors: list[str] = []
 
@@ -87,18 +89,24 @@ async def run_pipeline() -> Report:
             synthesizer = MockSynthesizer()
             logger.info("[MOCK] mock_claude=true — API 호출 없이 실행")
         else:
-            scorer = Scorer(api_key=settings.anthropic_api_key)
+            scorer = Scorer(
+                api_key=settings.anthropic_api_key,
+                model=settings.anthropic_main_model,
+            )
             analyzer = Analyzer(
                 api_key=settings.anthropic_api_key,
+                model=settings.anthropic_main_model,
                 mode=settings.analysis_mode,
             )
             checker = QualityChecker(
                 api_key=settings.anthropic_api_key,
                 min_score=settings.quality_min_score,
+                model=settings.anthropic_quality_model,
                 mode=settings.analysis_mode,
             )
             synthesizer = Synthesizer(
                 api_key=settings.anthropic_api_key,
+                model=settings.anthropic_main_model,
                 mode=settings.analysis_mode,
             )
 

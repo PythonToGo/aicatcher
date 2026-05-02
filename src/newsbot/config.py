@@ -57,6 +57,8 @@ class Settings(BaseSettings):
         default="light",
         description="LLM analysis profile: 'light' for lower token usage, 'detail' for richer output",
     )
+    anthropic_main_model: str = Field(default="claude-sonnet-4-6")
+    anthropic_quality_model: str = Field(default="claude-haiku-4-5-20251001")
     enable_multilingual: bool = Field(default=False)
     dry_run: bool = Field(default=False)
     mock_claude: bool = Field(default=False, description="Run the full pipeline with mock responses instead of calling the API")

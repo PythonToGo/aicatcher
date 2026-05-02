@@ -24,6 +24,24 @@ on:
           - light
           - detail
         default: light
+      main_model:
+        description: "메인 Anthropic 모델 (scoring/analyzer/synthesizer)"
+        type: choice
+        options:
+          - claude-sonnet-4-6
+          - claude-sonnet-4-5
+          - claude-haiku-4-5-20251001
+          - claude-opus-4-1
+        default: claude-sonnet-4-6
+      quality_model:
+        description: "품질 검사 Anthropic 모델"
+        type: choice
+        options:
+          - claude-haiku-4-5-20251001
+          - claude-sonnet-4-6
+          - claude-sonnet-4-5
+          - claude-opus-4-1
+        default: claude-haiku-4-5-20251001
 
 # 동시 실행 방지 — DB 캐시 충돌 방지 (ADR-002)
 concurrency:
@@ -126,5 +144,7 @@ jobs:
           DEDUP_SIMILARITY_THRESHOLD: "0.92"
           DEFAULT_LANGUAGE: "ko"
           ANALYSIS_MODE: ${{ github.event.inputs.analysis_mode || 'light' }}
+          ANTHROPIC_MAIN_MODEL: ${{ github.event.inputs.main_model || 'claude-sonnet-4-6' }}
+          ANTHROPIC_QUALITY_MODEL: ${{ github.event.inputs.quality_model || 'claude-haiku-4-5-20251001' }}
           LOG_LEVEL: "INFO"
         run: uv run python scripts/run_pipeline.py

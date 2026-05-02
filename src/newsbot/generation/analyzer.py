@@ -25,14 +25,20 @@ _TEMPERATURE = 0.5
 _DETAIL_CONTENT_LIMIT = 3000
 _LIGHT_CONTENT_LIMIT = 1500
 _DETAIL_MAX_TOKENS = 1024
-_LIGHT_MAX_TOKENS = 640
+_LIGHT_MAX_TOKENS = 900
+_MAX_PARSE_RETRIES = 1
+_RETRY_SUFFIX = (
+    "\n\nIMPORTANT: Your previous response was not valid complete JSON. "
+    "Reply again with only one complete JSON object that exactly matches the schema. "
+    "Do not use markdown fences or extra commentary. Keep each field concise."
+)
 
 
 def _load_prompt() -> str:
     return _PROMPT_PATH.read_text(encoding="utf-8")
 
 
-def _build_prompt(item: ScoredItem, content_limit: int) -> str:
+def _build_prompt(item: ScoredItem, content_limit: int = _DETAIL_CONTENT_LIMIT) -> str:
     template = _load_prompt()
     content = item.full_article or item.raw.body
     return (
@@ -102,27 +108,7 @@ class Analyzer:
     async def _analyze_one(self, item: ScoredItem) -> AnalyzedItem:
         async with self._semaphore:
             prompt = _build_prompt(item, self._content_limit)
-            try:
-                message = await self._client.messages.create(
-                    model=self._model,
-                    max_tokens=self._max_tokens,
-                    temperature=_TEMPERATURE,
-                    messages=[{"role": "user", "content": prompt}],
-                )
-            except anthropic.APIError as exc:
-                logger.warning("[analyzer] API error for '%s': %s", item.raw.title, exc)
-                raise
-
-            raw_text = message.content[0].text
-            try:
-                data = _parse_response(raw_text)
-                _validate_analysis(data)
-            except (json.JSONDecodeError, ValueError) as exc:
-                logger.warning(
-                    "[analyzer] invalid response for '%s': %s | raw: %s",
-                    item.raw.title, exc, raw_text[:200],
-                )
-                raise ValueError(f"invalid analyzer response: {exc}") from exc
+            data = await self._request_valid_analysis(item.raw.title, prompt)
 
             return AnalyzedItem(
                 scored=item,
@@ -140,5 +126,37 @@ class Analyzer:
             summary_ko=item.raw.body[:200],
             context="분석 중 오류가 발생했습니다.",
             implications="원문을 직접 확인하세요.",
-            limitations="자동 분석 실패 — 내용이 불완전할 수 있습니다.",
+                limitations="자동 분석 실패 — 내용이 불완전할 수 있습니다.",
         )
+
+    async def _request_valid_analysis(self, title: str, prompt: str) -> dict:
+        current_prompt = prompt
+        for attempt in range(_MAX_PARSE_RETRIES + 1):
+            try:
+                message = await self._client.messages.create(
+                    model=self._model,
+                    max_tokens=self._max_tokens,
+                    temperature=_TEMPERATURE,
+                    messages=[{"role": "user", "content": current_prompt}],
+                )
+            except anthropic.APIError as exc:
+                logger.warning("[analyzer] API error for '%s': %s", title, exc)
+                raise
+
+            raw_text = message.content[0].text
+            try:
+                data = _parse_response(raw_text)
+                _validate_analysis(data)
+                return data
+            except (json.JSONDecodeError, ValueError) as exc:
+                logger.warning(
+                    "[analyzer] invalid response for '%s' (attempt %d/%d): %s | raw: %s",
+                    title,
+                    attempt + 1,
+                    _MAX_PARSE_RETRIES + 1,
+                    exc,
+                    raw_text[:200],
+                )
+                if attempt >= _MAX_PARSE_RETRIES:
+                    raise ValueError(f"invalid analyzer response: {exc}") from exc
+                current_prompt = prompt + _RETRY_SUFFIX
