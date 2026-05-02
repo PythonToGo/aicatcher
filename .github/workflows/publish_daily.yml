@@ -5,9 +5,9 @@ env:
 
 on:
   schedule:
-    - cron: "7 6 * * *"   # 08:07 CEST
+    - cron: "15 22 * * *"   # 08:07 CEST
     - cron: "7 11 * * *"  # 13:07 CEST
-    - cron: "45 21 * * *" # 23:45 CEST
+    - cron: "7 20 * * *" # 23:45 CEST
   workflow_dispatch:
     inputs:
       dry_run:
