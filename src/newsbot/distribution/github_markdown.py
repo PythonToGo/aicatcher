@@ -48,7 +48,12 @@ class GitHubMarkdownPublisher(BasePublisher):
         self._repo_url = repo_url
         self._owner, self._repo = _parse_repo(repo_url)
         self._branch = branch
-        self._token = token or os.environ.get("GITHUB_ARCHIVE_TOKEN", "") or os.environ.get("GITHUB_TOKEN", "")
+        self._token = (
+            token
+            or os.environ.get("ARCHIVE_GITHUB_TOKEN", "")
+            or os.environ.get("GITHUB_ARCHIVE_TOKEN", "")
+            or os.environ.get("GITHUB_TOKEN", "")
+        )
         self._dry_run = dry_run
 
     @property

@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -41,7 +41,10 @@ class Settings(BaseSettings):
     # GitHub archive repo
     github_archive_repo_url: str = Field(default="git@github.com:PythonToGo/ai-newletter.git")
     github_archive_branch: str = Field(default="main")
-    github_archive_token: str = Field(default="")
+    github_archive_token: str = Field(
+        default="",
+        validation_alias=AliasChoices("ARCHIVE_GITHUB_TOKEN", "GITHUB_ARCHIVE_TOKEN"),
+    )
 
     # behaviour settings
     content_topic: str = Field(default="AI/ML")
