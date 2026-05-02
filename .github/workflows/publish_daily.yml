@@ -2,18 +2,28 @@ name: Publish Daily (X + GitHub Archive)
 
 on:
   schedule:
-    # KST 08:00 = UTC 23:00 (전날)
-    - cron: "0 23 * * *"
-    # KST 13:00 = UTC 04:00
-    - cron: "0 4 * * *"
-    # KST 20:00 = UTC 11:00
+    # GitHub Actions cron은 타임존을 직접 지원하지 않으므로
+    # Europe/Berlin 기준 08:00 / 13:00 / 20:00에 맞춰
+    # CET/CEST 후보 UTC 시각을 모두 등록하고, 아래 gate job에서 최종 필터링한다.
+    - cron: "0 6 * * *"
+    - cron: "0 7 * * *"
     - cron: "0 11 * * *"
+    - cron: "0 12 * * *"
+    - cron: "0 18 * * *"
+    - cron: "0 19 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
         description: "DRY_RUN 모드로 실행 (실제 게시 없음)"
         type: boolean
         default: true
+      analysis_mode:
+        description: "LLM 분석 모드 (light=기본 저비용, detail=상세 분석)"
+        type: choice
+        options:
+          - light
+          - detail
+        default: light
 
 # 동시 실행 방지 — DB 캐시 충돌 방지 (ADR-002)
 concurrency:
@@ -21,7 +31,38 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.berlin_time.outputs.should_run }}
+      berlin_time: ${{ steps.berlin_time.outputs.berlin_time }}
+    steps:
+      - name: Check Berlin publish window
+        id: berlin_time
+        env:
+          TZ: Europe/Berlin
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            berlin_time="$(date '+%Y-%m-%d %H:%M %Z')"
+            echo "berlin_time=$berlin_time" >> "$GITHUB_OUTPUT"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "Manual dispatch detected. Bypassing time gate at $berlin_time"
+            exit 0
+          fi
+          berlin_time="$(date '+%Y-%m-%d %H:%M %Z')"
+          hour_minute="$(date '+%H:%M')"
+          case "$hour_minute" in
+            08:00|13:00|20:00) should_run=true ;;
+            *) should_run=false ;;
+          esac
+          echo "berlin_time=$berlin_time" >> "$GITHUB_OUTPUT"
+          echo "should_run=$should_run" >> "$GITHUB_OUTPUT"
+          echo "Current Berlin time: $berlin_time"
+          echo "Should run: $should_run"
+
   publish:
+    needs: gate
+    if: needs.gate.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -81,5 +122,6 @@ jobs:
           QUALITY_MIN_SCORE: "0.8"
           DEDUP_SIMILARITY_THRESHOLD: "0.92"
           DEFAULT_LANGUAGE: "ko"
+          ANALYSIS_MODE: ${{ github.event.inputs.analysis_mode || 'light' }}
           LOG_LEVEL: "INFO"
         run: uv run python scripts/run_pipeline.py
