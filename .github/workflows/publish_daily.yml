@@ -1,5 +1,8 @@
 name: Publish Daily (X + GitHub Markdown Archive)
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   schedule:
     # GitHub Actions schedule은 정각(:00) 부근에 지연/드롭될 수 있어
@@ -54,25 +57,26 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v7
         with:
           version: "latest"
-          enable-cache: true
+          enable-cache: false
 
       - name: Install dependencies
         run: uv sync --frozen
 
       # sentence-transformers 모델 캐시 (~80MB, 첫 실행만 다운로드)
       - name: Cache HuggingFace models
-        uses: actions/cache@v4
+        uses: actions/cache@v5
+        continue-on-error: true
         with:
           path: ~/.cache/huggingface
           key: hf-models-all-MiniLM-L6-v2
@@ -81,7 +85,8 @@ jobs:
       # newsbot.db 영속성 (ADR-002)
       # restore-keys로 항상 가장 최근 캐시를 복원
       - name: Restore newsbot DB
-        uses: actions/cache@v4
+        uses: actions/cache@v5
+        continue-on-error: true
         with:
           path: data/newsbot.db
           key: newsbot-db-${{ github.run_id }}

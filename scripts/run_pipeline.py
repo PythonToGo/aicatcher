@@ -206,6 +206,11 @@ async def run_pipeline() -> Report:
     write_summary(report, published_channels, errors)
     logger.info("=== newsbot pipeline done | published=%s ===", published_channels)
 
+    if not settings.dry_run and "github_markdown" not in published_channels:
+        raise RuntimeError(
+            "GitHub archive did not complete. Check ARCHIVE_GITHUB_TOKEN permissions and the [github] logs."
+        )
+
     return report
 
 
