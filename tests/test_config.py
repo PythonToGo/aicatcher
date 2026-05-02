@@ -50,6 +50,14 @@ class TestSettings:
         )
         assert s.twitter_configured is True
 
+    def test_threads_configured_true_when_all_set(self) -> None:
+        s = Settings(
+            **REQUIRED_ENV,
+            threads_access_token="tok",
+            threads_user_id="123",
+        )
+        assert s.threads_configured is True
+
     def test_whatsapp_configured_false_when_partial(self) -> None:
         s = Settings(**REQUIRED_ENV, whatsapp_token="tok")
         assert s.whatsapp_configured is False

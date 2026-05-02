@@ -22,6 +22,7 @@ from newsbot.collection.registry import build_default_registry
 from newsbot.config import get_settings
 from newsbot.dedup.store import DeduplicationStore
 from newsbot.distribution.github_markdown import GitHubMarkdownPublisher
+from newsbot.distribution.threads_pub import ThreadsPublisher
 from newsbot.distribution.twitter_pub import TwitterPublisher
 from newsbot.generation.analyzer import Analyzer
 from newsbot.generation.fetcher import Fetcher
@@ -169,6 +170,22 @@ async def run_pipeline() -> Report:
     else:
         logger.info("twitter not configured, skipping")
 
+    if settings.threads_configured:
+        publisher = ThreadsPublisher(
+            access_token=settings.threads_access_token,
+            user_id=settings.threads_user_id,
+            dry_run=settings.dry_run,
+        )
+        try:
+            publisher.publish(report)
+            published_channels.append("threads")
+        except Exception as exc:
+            err = f"threads publish failed: {exc}"
+            logger.error(err)
+            errors.append(err)
+    else:
+        logger.info("threads not configured, skipping")
+
     gh_publisher = GitHubMarkdownPublisher(
         repo_url=settings.github_archive_repo_url,
         branch=settings.github_archive_branch,
@@ -176,8 +193,10 @@ async def run_pipeline() -> Report:
         dry_run=settings.dry_run,
     )
     try:
-        gh_publisher.publish(report)
-        published_channels.append("github_markdown")
+        if gh_publisher.publish(report):
+            published_channels.append("github_markdown")
+        else:
+            errors.append("github archive skipped: missing token or archive disabled")
     except Exception as exc:
         err = f"github archive failed: {exc}"
         logger.warning(err)

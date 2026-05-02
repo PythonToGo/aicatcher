@@ -60,7 +60,7 @@ class GitHubMarkdownPublisher(BasePublisher):
     def channel_name(self) -> str:
         return "github_markdown"
 
-    def publish(self, report: Report) -> None:
+    def publish(self, report: Report) -> bool:
         if self._dry_run:
             self._log_dry_run(report)
             logger.info(
@@ -69,16 +69,32 @@ class GitHubMarkdownPublisher(BasePublisher):
                 f"{self._owner}/{self._repo}",
                 self._branch,
             )
-            return
+            return True
 
         if not self._token:
-            logger.warning("[github] no archive token set, skipping markdown archive")
-            return
+            logger.warning(
+                "[github] no archive token set, skipping markdown archive for %s@%s",
+                f"{self._owner}/{self._repo}",
+                self._branch,
+            )
+            return False
 
         try:
             commit_url = self._commit_report(report)
             logger.info("[github] archived report %s → %s", report.report_id, commit_url)
             self._log_published(report)
+            return True
+        except httpx.HTTPStatusError as exc:
+            body = exc.response.text[:500] if exc.response is not None else ""
+            logger.error(
+                "[github] failed to commit report %s: status=%s repo=%s branch=%s body=%s",
+                report.report_id,
+                exc.response.status_code if exc.response is not None else "?",
+                f"{self._owner}/{self._repo}",
+                self._branch,
+                body,
+            )
+            raise
         except httpx.HTTPError as exc:
             logger.error("[github] failed to commit report %s: %s", report.report_id, exc)
             raise

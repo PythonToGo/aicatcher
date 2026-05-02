@@ -12,7 +12,9 @@ from newsbot.distribution.github_markdown import (
     _build_archive_path,
     _parse_repo,
 )
+from newsbot.distribution.threads_pub import ThreadsPublisher
 from newsbot.distribution.twitter_pub import TwitterPublisher
+from newsbot.formatting.threads import ThreadsFormatter
 from newsbot.formatting.twitter import (
     TwitterFormatter,
     _fit_text,
@@ -169,6 +171,41 @@ class TestTwitterFormatter:
         assert len(tweets) >= 1
 
 
+class TestThreadsFormatter:
+    def test_format_returns_list(self) -> None:
+        formatter = ThreadsFormatter()
+        report = _make_report()
+        posts = formatter.format(report)
+        assert isinstance(posts, list)
+        assert len(posts) >= 2
+
+    def test_all_posts_within_limit(self) -> None:
+        formatter = ThreadsFormatter()
+        report = _make_report(n_items=5)
+        posts = formatter.format(report)
+        assert all(len(post) <= 500 for post in posts)
+
+    def test_item_urls_in_posts(self) -> None:
+        formatter = ThreadsFormatter(max_items=2)
+        report = _make_report(n_items=2)
+        all_text = "\n".join(formatter.format(report))
+        for item in report.items[:2]:
+            assert item.url in all_text
+
+    def test_posts_use_english_source_title_not_korean_summary(self) -> None:
+        formatter = ThreadsFormatter(max_items=1)
+        report = _make_report(n_items=1)
+        posts = formatter.format(report)
+        assert "GPT-5가 출시되어" not in "\n".join(posts)
+        assert report.items[0].title in "\n".join(posts)
+
+    def test_closing_post_is_english(self) -> None:
+        formatter = ThreadsFormatter()
+        report = _make_report()
+        posts = formatter.format(report)
+        assert "Full archive is available on GitHub." in posts[-1]
+
+
 # ── GitHubMarkdownPublisher ───────────────────────────────────────────────────
 
 class TestGitHubMarkdownHelpers:
@@ -193,7 +230,7 @@ class TestGitHubMarkdownPublisher:
         )
 
         with patch("httpx.Client") as mock_cls:
-            publisher.publish(report)
+            assert publisher.publish(report) is True
             mock_cls.assert_not_called()
 
     def test_skips_when_no_token(self) -> None:
@@ -205,7 +242,7 @@ class TestGitHubMarkdownPublisher:
         )
 
         with patch("httpx.Client") as mock_cls:
-            publisher.publish(report)
+            assert publisher.publish(report) is False
             mock_cls.assert_not_called()
 
     def test_calls_api_with_correct_endpoint(self) -> None:
@@ -227,7 +264,7 @@ class TestGitHubMarkdownPublisher:
             mock_client.put.return_value = mock_resp
             mock_cls.return_value = mock_client
 
-            publisher.publish(report)
+            assert publisher.publish(report) is True
 
             call_args = mock_client.put.call_args
             assert "owner/repo/contents/news/2026/04/17/20260417-0800-ko.md" in call_args[0][0]
@@ -287,3 +324,42 @@ class TestTwitterPublisher:
 
     def test_channel_name(self) -> None:
         assert self._make_publisher().channel_name == "twitter"
+
+
+class TestThreadsPublisher:
+    def _make_publisher(self, dry_run: bool = True) -> ThreadsPublisher:
+        return ThreadsPublisher(
+            access_token="tok",
+            user_id="123",
+            dry_run=dry_run,
+        )
+
+    def test_dry_run_does_not_call_api(self) -> None:
+        publisher = self._make_publisher(dry_run=True)
+        report = _make_report()
+
+        with patch("httpx.Client") as mock_cls:
+            publisher.publish(report)
+            mock_cls.assert_not_called()
+
+    def test_publish_calls_threads_api(self) -> None:
+        publisher = self._make_publisher(dry_run=False)
+        report = _make_report(n_items=1)
+
+        create_resp = MagicMock()
+        create_resp.raise_for_status = MagicMock()
+        create_resp.json.side_effect = [{"id": "creation-1"}, {"id": "post-1"}, {"id": "creation-2"}, {"id": "post-2"}, {"id": "creation-3"}, {"id": "post-3"}]
+
+        with patch("httpx.Client") as mock_cls:
+            mock_client = MagicMock()
+            mock_client.__enter__ = MagicMock(return_value=mock_client)
+            mock_client.__exit__ = MagicMock(return_value=False)
+            mock_client.post.return_value = create_resp
+            mock_cls.return_value = mock_client
+
+            publisher.publish(report)
+
+            assert mock_client.post.call_count >= 4
+
+    def test_channel_name(self) -> None:
+        assert self._make_publisher().channel_name == "threads"

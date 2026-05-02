@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     twitter_access_token: str = Field(default="")
     twitter_access_secret: str = Field(default="")
 
+    # Threads
+    threads_access_token: str = Field(default="")
+    threads_user_id: str = Field(default="")
+
     # Substack
     substack_email: str = Field(default="")
     substack_password: str = Field(default="")
@@ -100,6 +104,10 @@ class Settings(BaseSettings):
             self.twitter_access_token,
             self.twitter_access_secret,
         ])
+
+    @property
+    def threads_configured(self) -> bool:
+        return all([self.threads_access_token, self.threads_user_id])
 
     @property
     def substack_configured(self) -> bool:
