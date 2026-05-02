@@ -2,15 +2,14 @@ name: Publish Daily (X + GitHub Markdown Archive)
 
 on:
   schedule:
-    # GitHub Actions cron은 타임존을 직접 지원하지 않으므로
-    # Europe/Berlin 기준 08:00 / 13:00 / 20:00에 맞춰
-    # CET/CEST 후보 UTC 시각을 모두 등록하고, 아래 gate job에서 최종 필터링한다.
-    - cron: "0 6 * * *"
-    - cron: "0 7 * * *"
-    - cron: "0 11 * * *"
-    - cron: "0 12 * * *"
-    - cron: "0 18 * * *"
-    - cron: "0 19 * * *"
+    # GitHub Actions schedule은 정각(:00) 부근에 지연/드롭될 수 있어
+    # 08:07 / 13:07 / 20:07 Europe/Berlin으로 직접 스케줄한다.
+    - cron: "7 8 * * *"
+      timezone: "Europe/Berlin"
+    - cron: "7 13 * * *"
+      timezone: "Europe/Berlin"
+    - cron: "13 23 * * *"
+      timezone: "Europe/Berlin"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -49,38 +48,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  gate:
-    runs-on: ubuntu-latest
-    outputs:
-      should_run: ${{ steps.berlin_time.outputs.should_run }}
-      berlin_time: ${{ steps.berlin_time.outputs.berlin_time }}
-    steps:
-      - name: Check Berlin publish window
-        id: berlin_time
-        env:
-          TZ: Europe/Berlin
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            berlin_time="$(date '+%Y-%m-%d %H:%M %Z')"
-            echo "berlin_time=$berlin_time" >> "$GITHUB_OUTPUT"
-            echo "should_run=true" >> "$GITHUB_OUTPUT"
-            echo "Manual dispatch detected. Bypassing time gate at $berlin_time"
-            exit 0
-          fi
-          berlin_time="$(date '+%Y-%m-%d %H:%M %Z')"
-          hour_minute="$(date '+%H:%M')"
-          case "$hour_minute" in
-            08:00|13:00|20:00) should_run=true ;;
-            *) should_run=false ;;
-          esac
-          echo "berlin_time=$berlin_time" >> "$GITHUB_OUTPUT"
-          echo "should_run=$should_run" >> "$GITHUB_OUTPUT"
-          echo "Current Berlin time: $berlin_time"
-          echo "Should run: $should_run"
-
   publish:
-    needs: gate
-    if: needs.gate.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
