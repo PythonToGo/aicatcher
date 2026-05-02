@@ -46,7 +46,12 @@ async def run_pipeline() -> Report:
     _setup_logging(settings.log_level)
     logger = logging.getLogger(__name__)
 
-    logger.info("=== newsbot pipeline start | DRY_RUN=%s MOCK_CLAUDE=%s ===", settings.dry_run, settings.mock_claude)
+    logger.info(
+        "=== newsbot pipeline start | DRY_RUN=%s MOCK_CLAUDE=%s ANALYSIS_MODE=%s ===",
+        settings.dry_run,
+        settings.mock_claude,
+        settings.analysis_mode,
+    )
     errors: list[str] = []
 
     if not settings.mock_claude and not settings.anthropic_api_key:
@@ -83,12 +88,19 @@ async def run_pipeline() -> Report:
             logger.info("[MOCK] mock_claude=true — API 호출 없이 실행")
         else:
             scorer = Scorer(api_key=settings.anthropic_api_key)
-            analyzer = Analyzer(api_key=settings.anthropic_api_key)
+            analyzer = Analyzer(
+                api_key=settings.anthropic_api_key,
+                mode=settings.analysis_mode,
+            )
             checker = QualityChecker(
                 api_key=settings.anthropic_api_key,
                 min_score=settings.quality_min_score,
+                mode=settings.analysis_mode,
             )
-            synthesizer = Synthesizer(api_key=settings.anthropic_api_key)
+            synthesizer = Synthesizer(
+                api_key=settings.anthropic_api_key,
+                mode=settings.analysis_mode,
+            )
 
         scored = await scorer.score_all(new_items)
 
@@ -100,7 +112,9 @@ async def run_pipeline() -> Report:
         logger.info("selected top %d items for analysis", len(top_scored))
 
         # ── 4. Fetch full articles ────────────────────────────
-        fetcher = Fetcher()
+        fetcher = Fetcher(
+            max_content_length=2000 if settings.analysis_mode == "light" else 4000
+        )
         await fetcher.fetch_all(top_scored)
 
         # ── 5. Analyze ────────────────────────────────────────

@@ -21,15 +21,18 @@ logger = logging.getLogger(__name__)
 
 _PROMPT_PATH = Path(__file__).parent / "prompts" / "analyzer.md"
 _MODEL = "claude-sonnet-4-6"
-_MAX_TOKENS = 1024
 _TEMPERATURE = 0.5
+_DETAIL_CONTENT_LIMIT = 3000
+_LIGHT_CONTENT_LIMIT = 1500
+_DETAIL_MAX_TOKENS = 1024
+_LIGHT_MAX_TOKENS = 640
 
 
 def _load_prompt() -> str:
     return _PROMPT_PATH.read_text(encoding="utf-8")
 
 
-def _build_prompt(item: ScoredItem) -> str:
+def _build_prompt(item: ScoredItem, content_limit: int) -> str:
     template = _load_prompt()
     content = item.full_article or item.raw.body
     return (
@@ -37,7 +40,7 @@ def _build_prompt(item: ScoredItem) -> str:
         .replace("{{title}}", item.raw.title)
         .replace("{{source}}", item.raw.source)
         .replace("{{url}}", item.raw.url)
-        .replace("{{content}}", content[:3000])
+        .replace("{{content}}", content[:content_limit])
     )
 
 
@@ -63,10 +66,18 @@ class Analyzer:
         api_key: str,
         model: str = _MODEL,
         concurrency: int = 5,
+        mode: str = "detail",
     ) -> None:
         self._client = anthropic.AsyncAnthropic(api_key=api_key)
         self._model = model
         self._semaphore = asyncio.Semaphore(concurrency)
+        self._mode = mode
+        self._content_limit = (
+            _LIGHT_CONTENT_LIMIT if mode == "light" else _DETAIL_CONTENT_LIMIT
+        )
+        self._max_tokens = (
+            _LIGHT_MAX_TOKENS if mode == "light" else _DETAIL_MAX_TOKENS
+        )
 
     async def analyze_all(self, items: list[ScoredItem]) -> list[AnalyzedItem]:
         """Analyze all items in parallel and fall back on failure."""
@@ -90,11 +101,11 @@ class Analyzer:
 
     async def _analyze_one(self, item: ScoredItem) -> AnalyzedItem:
         async with self._semaphore:
-            prompt = _build_prompt(item)
+            prompt = _build_prompt(item, self._content_limit)
             try:
                 message = await self._client.messages.create(
                     model=self._model,
-                    max_tokens=_MAX_TOKENS,
+                    max_tokens=self._max_tokens,
                     temperature=_TEMPERATURE,
                     messages=[{"role": "user", "content": prompt}],
                 )

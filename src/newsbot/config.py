@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     quality_min_score: float = Field(default=0.8, ge=0.0, le=1.0)
     dedup_similarity_threshold: float = Field(default=0.92, ge=0.0, le=1.0)
     default_language: str = Field(default="ko")
+    analysis_mode: str = Field(
+        default="light",
+        description="LLM analysis profile: 'light' for lower token usage, 'detail' for richer output",
+    )
     enable_multilingual: bool = Field(default=False)
     dry_run: bool = Field(default=False)
     mock_claude: bool = Field(default=False, description="Run the full pipeline with mock responses instead of calling the API")
@@ -56,6 +60,16 @@ class Settings(BaseSettings):
         if v not in ("ko", "en"):
             raise ValueError(f"default_language must be 'ko' or 'en', got '{v}'")
         return v
+
+    @field_validator("analysis_mode")
+    @classmethod
+    def validate_analysis_mode(cls, v: str) -> str:
+        normalized = v.lower()
+        if normalized not in ("light", "detail"):
+            raise ValueError(
+                f"analysis_mode must be 'light' or 'detail', got '{v}'"
+            )
+        return normalized
 
     @field_validator("log_level")
     @classmethod

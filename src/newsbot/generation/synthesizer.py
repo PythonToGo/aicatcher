@@ -20,17 +20,34 @@ logger = logging.getLogger(__name__)
 
 _PROMPT_PATH = Path(__file__).parent / "prompts" / "synthesizer.md"
 _MODEL = "claude-sonnet-4-6"
-_MAX_TOKENS = 2048
 _TEMPERATURE = 0.7
 _DEFAULT_HOURS_BACK = 24
+_DETAIL_MAX_TOKENS = 2048
+_LIGHT_MAX_TOKENS = 900
 
 
 def _load_prompt() -> str:
     return _PROMPT_PATH.read_text(encoding="utf-8")
 
 
-def _items_to_json(items: list[AnalyzedItem]) -> str:
+def _truncate(text: str, limit: int) -> str:
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
+
+
+def _items_to_json(items: list[AnalyzedItem], mode: str) -> str:
     """Serialize analyzed items into prompt-ready JSON."""
+    if mode == "light":
+        payload = [
+            {
+                "title": item.title,
+                "score": item.score,
+                "summary_ko": _truncate(item.summary_ko, 180),
+                "implications": _truncate(item.implications, 160),
+            }
+            for item in items
+        ]
+        return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+
     payload = [
         {
             "title": item.title,
@@ -46,13 +63,13 @@ def _items_to_json(items: list[AnalyzedItem]) -> str:
     return json.dumps(payload, ensure_ascii=False, indent=2)
 
 
-def _build_prompt(items: list[AnalyzedItem], hours_back: int) -> str:
+def _build_prompt(items: list[AnalyzedItem], hours_back: int, mode: str) -> str:
     template = _load_prompt()
     return (
         template
         .replace("{{item_count}}", str(len(items)))
         .replace("{{hours_back}}", str(hours_back))
-        .replace("{{items_json}}", _items_to_json(items))
+        .replace("{{items_json}}", _items_to_json(items, mode))
     )
 
 
@@ -80,10 +97,13 @@ class Synthesizer:
         api_key: str,
         model: str = _MODEL,
         hours_back: int = _DEFAULT_HOURS_BACK,
+        mode: str = "detail",
     ) -> None:
         self._client = anthropic.AsyncAnthropic(api_key=api_key)
         self._model = model
         self._hours_back = hours_back
+        self._mode = mode
+        self._max_tokens = _LIGHT_MAX_TOKENS if mode == "light" else _DETAIL_MAX_TOKENS
 
     async def synthesize(
         self,
@@ -95,11 +115,11 @@ class Synthesizer:
         if not items:
             raise ValueError("cannot synthesize an empty item list")
 
-        prompt = _build_prompt(items, self._hours_back)
+        prompt = _build_prompt(items, self._hours_back, self._mode)
         try:
             message = await self._client.messages.create(
                 model=self._model,
-                max_tokens=_MAX_TOKENS,
+                max_tokens=self._max_tokens,
                 temperature=_TEMPERATURE,
                 messages=[{"role": "user", "content": prompt}],
             )

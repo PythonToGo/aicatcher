@@ -26,7 +26,8 @@ logger = logging.getLogger(__name__)
 _PROMPT_PATH = Path(__file__).parent.parent / "generation" / "prompts" / "quality_check.md"
 _MODEL = "claude-haiku-4-5-20251001"  # Use Haiku to keep quality-check costs down.
 _MAX_TOKENS = 256
-_MAX_RETRIES = 2
+_DETAIL_MAX_RETRIES = 2
+_LIGHT_MAX_RETRIES = 0
 
 # Rule-based pre-check thresholds.
 _MIN_FIELD_LENGTH = 20          # Minimum length for each text field.
@@ -125,10 +126,13 @@ class QualityChecker:
         api_key: str,
         min_score: float = 0.8,
         model: str = _MODEL,
+        mode: str = "detail",
     ) -> None:
         self._client = anthropic.AsyncAnthropic(api_key=api_key)
         self._min_score = min_score
         self._model = model
+        self._mode = mode
+        self._max_retries = _LIGHT_MAX_RETRIES if mode == "light" else _DETAIL_MAX_RETRIES
 
     async def check(self, item: AnalyzedItem) -> QualityResult:
         """Check a single item.
@@ -141,6 +145,9 @@ class QualityChecker:
         if rule_result is not None:
             logger.debug("[quality] rule fail '%s': %s", item.title, rule_result.feedback)
             return rule_result
+
+        if self._mode == "light":
+            return QualityResult.skip()
 
         # Stage 2
         try:
@@ -201,10 +208,14 @@ class QualityChecker:
                 logger.info("[quality] no analyzer provided, skipping '%s'", item.title)
                 continue
 
+            if self._max_retries == 0:
+                logger.info("[quality] retries disabled in %s mode, skipping '%s'", self._mode, item.title)
+                continue
+
             # Retry.
             current = item
-            for attempt in range(1, _MAX_RETRIES + 1):
-                logger.info("[quality] retry %d/%d for '%s'", attempt, _MAX_RETRIES, item.title)
+            for attempt in range(1, self._max_retries + 1):
+                logger.info("[quality] retry %d/%d for '%s'", attempt, self._max_retries, item.title)
                 try:
                     retried = await analyzer.analyze_one(current.scored)
                 except Exception as exc:
