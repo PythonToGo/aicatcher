@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     whatsapp_group_id: str = Field(default="")
 
     # GitHub archive repo
-    github_archive_repo_url: str = Field(default="git@github.com:PythonToGo/ai-newletter.git")
+    github_archive_repo_url: str = Field(default="git@github.com:PythonToGo/ai-newsletter.git")
     github_archive_branch: str = Field(default="main")
     github_archive_token: str = Field(
         default="",

@@ -210,9 +210,9 @@ class TestThreadsFormatter:
 
 class TestGitHubMarkdownHelpers:
     def test_parse_ssh_repo_url(self) -> None:
-        owner, repo = _parse_repo("git@github.com:PythonToGo/ai-newletter.git")
+        owner, repo = _parse_repo("git@github.com:PythonToGo/ai-newsletter.git")
         assert owner == "PythonToGo"
-        assert repo == "ai-newletter"
+        assert repo == "ai-newsletter"
 
     def test_build_archive_path(self) -> None:
         report = _make_report()

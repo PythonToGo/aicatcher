@@ -104,7 +104,7 @@ jobs:
           THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ARCHIVE_GITHUB_TOKEN: ${{ secrets.ARCHIVE_GITHUB_TOKEN }}
-          GITHUB_ARCHIVE_REPO_URL: "git@github.com:PythonToGo/ai-newletter.git"
+          GITHUB_ARCHIVE_REPO_URL: "git@github.com:PythonToGo/ai-newsletter.git"
           GITHUB_ARCHIVE_BRANCH: "main"
           # workflow_dispatch dry_run 입력 우선, 없으면 false
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}

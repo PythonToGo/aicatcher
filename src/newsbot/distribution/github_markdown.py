@@ -115,7 +115,7 @@ class GitHubMarkdownPublisher(BasePublisher):
             "branch": self._branch,
         }
 
-        with httpx.Client(timeout=15.0) as client:
+        with httpx.Client(timeout=15.0, follow_redirects=True) as client:
             # If the file already exists (e.g. re-run within the same minute),
             # the GitHub API requires the current file's sha to overwrite it.
             get_resp = client.get(url, headers=headers, params={"ref": self._branch})
