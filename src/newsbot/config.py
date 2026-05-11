@@ -50,6 +50,11 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("ARCHIVE_GITHUB_TOKEN", "GITHUB_ARCHIVE_TOKEN"),
     )
 
+    # Email (Gmail SMTP)
+    gmail_address: str = Field(default="")
+    gmail_app_password: str = Field(default="")
+    email_recipients: str = Field(default="", description="Comma-separated list of recipient addresses")
+
     # behaviour settings
     content_topic: str = Field(default="AI/ML")
     items_per_report: int = Field(default=6, ge=1, le=20)
@@ -116,6 +121,10 @@ class Settings(BaseSettings):
     @property
     def whatsapp_configured(self) -> bool:
         return all([self.whatsapp_token, self.whatsapp_phone_number_id, self.whatsapp_group_id])
+
+    @property
+    def email_configured(self) -> bool:
+        return bool(self.gmail_address and self.gmail_app_password and self.email_recipients)
 
 
 @lru_cache(maxsize=1)

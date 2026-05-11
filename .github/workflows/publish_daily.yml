@@ -106,6 +106,9 @@ jobs:
           ARCHIVE_GITHUB_TOKEN: ${{ secrets.ARCHIVE_GITHUB_TOKEN }}
           GITHUB_ARCHIVE_REPO_URL: "git@github.com:PythonToGo/ai-newsletter.git"
           GITHUB_ARCHIVE_BRANCH: "main"
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          EMAIL_RECIPIENTS: ${{ secrets.EMAIL_RECIPIENTS }}
           # workflow_dispatch dry_run 입력 우선, 없으면 false
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
           CONTENT_TOPIC: "AI/ML"

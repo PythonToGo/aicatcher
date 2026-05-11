@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 # Add the project root to sys.path when running the script directly.
@@ -21,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from newsbot.collection.registry import build_default_registry
 from newsbot.config import get_settings
 from newsbot.dedup.store import DeduplicationStore
+from newsbot.distribution.email_pub import EmailPublisher
 from newsbot.distribution.github_markdown import GitHubMarkdownPublisher
 from newsbot.distribution.threads_pub import ThreadsPublisher
 from newsbot.distribution.twitter_pub import TwitterPublisher
@@ -202,7 +204,28 @@ async def run_pipeline() -> Report:
         logger.warning(err)
         errors.append(err)
 
-    # ── 10. Summary ───────────────────────────────────────────
+    # ── 10. Email ─────────────────────────────────────────────
+    if "github_markdown" in published_channels and settings.email_configured:
+        email_pub = EmailPublisher(
+            gmail_address=settings.gmail_address,
+            app_password=settings.gmail_app_password,
+            recipients=settings.email_recipients.split(","),
+            dry_run=settings.dry_run,
+        )
+        try:
+            email_pub.publish(report)
+            published_channels.append("email")
+        except Exception as exc:
+            err = f"email publish failed: {exc}"
+            logger.error(err)
+            errors.append(err)
+    else:
+        if "github_markdown" not in published_channels:
+            logger.info("email skipped: github archive did not complete")
+        else:
+            logger.info("email not configured, skipping")
+
+    # ── 11. Summary ───────────────────────────────────────────
     write_summary(report, published_channels, errors)
     logger.info("=== newsbot pipeline done | published=%s ===", published_channels)
 
@@ -215,6 +238,10 @@ async def run_pipeline() -> Report:
 
 
 def main() -> None:
+    if datetime.now(tz=timezone.utc).weekday() >= 5:  # 5=Sat, 6=Sun
+        logging.basicConfig(format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+        logging.getLogger(__name__).info("주말에는 뉴스레터를 발행하지 않습니다. 건너뜁니다.")
+        sys.exit(0)
     try:
         asyncio.run(run_pipeline())
     except RuntimeError as exc:
