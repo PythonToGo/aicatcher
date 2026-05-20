@@ -19,7 +19,7 @@ from pathlib import Path
 # Add the project root to sys.path when running the script directly.
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from newsbot.collection.registry import build_default_registry
+from newsbot.collection.registry import build_registry
 from newsbot.config import get_settings
 from newsbot.dedup.store import DeduplicationStore
 from newsbot.distribution.email_pub import EmailPublisher
@@ -50,7 +50,8 @@ async def run_pipeline() -> Report:
     logger = logging.getLogger(__name__)
 
     logger.info(
-        "=== newsbot pipeline start | DRY_RUN=%s MOCK_CLAUDE=%s ANALYSIS_MODE=%s MAIN_MODEL=%s QUALITY_MODEL=%s ===",
+        "=== newsbot pipeline start | PIPELINE_MODE=%s DRY_RUN=%s MOCK_CLAUDE=%s ANALYSIS_MODE=%s MAIN_MODEL=%s QUALITY_MODEL=%s ===",
+        settings.pipeline_mode,
         settings.dry_run,
         settings.mock_claude,
         settings.analysis_mode,
@@ -63,7 +64,10 @@ async def run_pipeline() -> Report:
         raise RuntimeError("ANTHROPIC_API_KEY가 설정되지 않았습니다. mock 모드는 MOCK_CLAUDE=true 로 실행하세요.")
 
     # ── 1. Collection ─────────────────────────────────────────
-    registry = build_default_registry()
+    registry = build_registry(
+        settings.pipeline_mode,
+        api_key=settings.semantic_scholar_api_key,
+    )
     raw_items = await registry.collect_all()
     logger.info("collected %d raw items", len(raw_items))
 
@@ -95,11 +99,13 @@ async def run_pipeline() -> Report:
             scorer = Scorer(
                 api_key=settings.anthropic_api_key,
                 model=settings.anthropic_main_model,
+                pipeline_mode=settings.pipeline_mode,
             )
             analyzer = Analyzer(
                 api_key=settings.anthropic_api_key,
                 model=settings.anthropic_main_model,
                 mode=settings.analysis_mode,
+                pipeline_mode=settings.pipeline_mode,
             )
             checker = QualityChecker(
                 api_key=settings.anthropic_api_key,
@@ -111,6 +117,7 @@ async def run_pipeline() -> Report:
                 api_key=settings.anthropic_api_key,
                 model=settings.anthropic_main_model,
                 mode=settings.analysis_mode,
+                pipeline_mode=settings.pipeline_mode,
             )
 
         scored = await scorer.score_all(new_items)
@@ -118,8 +125,8 @@ async def run_pipeline() -> Report:
         # Feedback weighting (Phase 1: no-op)
         weighted = FeedbackWeighter().apply(scored)
 
-        # Keep only the top N items.
-        top_scored = weighted[: settings.items_per_report]
+        # Keep only the top N items (respects pipeline_mode via effective_items_per_report).
+        top_scored = weighted[: settings.effective_items_per_report]
         logger.info("selected top %d items for analysis", len(top_scored))
 
         # ── 4. Fetch full articles ────────────────────────────

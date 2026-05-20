@@ -10,14 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class CollectorRegistry:
-    """Manages a list of collectors and runs them in parallel.
-
-    Example:
-        registry = CollectorRegistry()
-        registry.register(HackerNewsCollector())
-        registry.register(ArxivCollector())
-        items = await registry.collect_all()
-    """
+    """Manages a list of collectors and runs them in parallel."""
 
     def __init__(self) -> None:
         self._collectors: list[BaseCollector] = []
@@ -55,12 +48,45 @@ class CollectorRegistry:
         return items
 
 
-def build_default_registry() -> CollectorRegistry:
-    """Return the default Phase 1 collector set."""
-    from newsbot.collection.arxiv import ArxivCollector
-    from newsbot.collection.hackernews import HackerNewsCollector
+def build_registry(pipeline_mode: str = "news", **kwargs: object) -> CollectorRegistry:
+    """Return a CollectorRegistry configured for the given pipeline_mode.
 
+    Args:
+        pipeline_mode: "news" | "new_paper" | "classic_paper"
+        **kwargs: forwarded to individual collector constructors where applicable
+            - api_key: Semantic Scholar API key (classic_paper mode)
+    """
     registry = CollectorRegistry()
-    registry.register(HackerNewsCollector())
-    registry.register(ArxivCollector())
+
+    if pipeline_mode == "news":
+        from newsbot.collection.hackernews import HackerNewsCollector
+        registry.register(HackerNewsCollector())
+        # Reddit / RSS collectors registered here in future phases
+
+    elif pipeline_mode == "new_paper":
+        from newsbot.collection.arxiv import ArxivCollector
+        registry.register(ArxivCollector(max_results=50, hours_back=168))  # past 7 days
+        # HuggingFace Papers collector registered here in future phases
+
+    elif pipeline_mode == "classic_paper":
+        from newsbot.collection.semantic_scholar import SemanticScholarCollector
+        registry.register(
+            SemanticScholarCollector(
+                limit=10,
+                api_key=str(kwargs.get("api_key", "")),
+            )
+        )
+
+    else:
+        logger.warning(
+            "unknown pipeline_mode '%s', falling back to news collectors", pipeline_mode
+        )
+        from newsbot.collection.hackernews import HackerNewsCollector
+        registry.register(HackerNewsCollector())
+
     return registry
+
+
+def build_default_registry() -> CollectorRegistry:
+    """Backward-compatible alias — returns the news registry."""
+    return build_registry("news")

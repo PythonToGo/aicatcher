@@ -44,48 +44,102 @@ def _format_item_tweet(item: AnalyzedItem, index: int, total: int) -> str:
     return f"{num}{summary}\n\n{item.url}"
 
 
+def _format_new_paper_tweet(item: AnalyzedItem, index: int, total: int) -> str:
+    """Format a research paper tweet: title + methodology snippet + URL."""
+    num = f"({index}/{total}) "
+    methodology = item.extra.get("methodology", "") or item.summary_ko
+    available = _MAX_TWEET_LEN - len(num) - _URL_LEN - 4
+    snippet = _fit_text(methodology, available)
+    return f"{num}{item.title}\n\n{snippet}\n\n{item.url}"
+
+
+def _format_classic_tweets(report: Report) -> list[str]:
+    """Render a classic paper as a 3-tweet thread."""
+    item = report.items[0]
+    why = item.extra.get("why_groundbreaking", "") or item.context
+    learning = item.extra.get("learning_points", "") or item.implications
+
+    tweets: list[str] = []
+
+    # Tweet 1: headline + summary
+    t1_body = f"📚 클래식 논문 리뷰\n\n{report.headline}\n\n{item.summary_ko}\n\n(1/3)"
+    tweets.append(_fit_text(t1_body, _MAX_TWEET_LEN))
+
+    # Tweet 2: why groundbreaking
+    t2_body = f"(2/3) 왜 혁신적이었나\n\n{why}"
+    tweets.append(_fit_text(t2_body, _MAX_TWEET_LEN))
+
+    # Tweet 3: learning points + URL
+    first_two_lines = "\n".join(learning.splitlines()[:4]) if learning else ""
+    t3_body = f"(3/3) 오늘날 배울 점\n\n{first_two_lines}\n\n{item.url}"
+    tweets.append(_fit_text(t3_body, _MAX_TWEET_LEN))
+
+    return tweets
+
+
 class TwitterFormatter(BaseFormatter):
-    """Convert a Report into a tweet thread."""
+    """Convert a Report into a tweet thread (mode-aware)."""
 
     def __init__(self, max_items: int = 5, max_tweets: int = _MAX_TWEETS) -> None:
         self._max_items = max_items
         self._max_tweets = max_tweets
 
     def format(self, report: Report) -> list[str]:
-        """Convert a Report into a list of tweets.
+        """Dispatch to the correct thread format based on report.pipeline_mode."""
+        if report.pipeline_mode == "classic_paper":
+            return _format_classic_tweets(report)
+        if report.pipeline_mode == "new_paper":
+            return self._format_new_paper(report)
+        return self._format_news(report)
 
-        Structure:
-          [0] Headline + trend summary (1/N)
-          [1..N-1] Per-item tweets
-          [-1] Closing tweet with source guidance
-        """
+    def _format_news(self, report: Report) -> list[str]:
+        """Original news thread format."""
         tweets: list[str] = []
-
-        # Determine how many item slots are available after headline and closing tweets.
         item_slots = min(self._max_tweets - 2, self._max_items, len(report.items))
         items = report.items[:item_slots]
-        total = item_slots + 2  # headline + items + closing
+        total = item_slots + 2
 
-        # 1. Headline tweet.
         trend_snippet = _fit_text(
             report.trend_analysis,
             _MAX_TWEET_LEN - len(report.headline) - len(f"\n\n (1/{total})") - 2,
         )
-        headline_tweet = f"{report.headline}\n\n{trend_snippet}\n\n(1/{total})"
-        tweets.append(_fit_text(headline_tweet, _MAX_TWEET_LEN))
+        tweets.append(_fit_text(
+            f"{report.headline}\n\n{trend_snippet}\n\n(1/{total})",
+            _MAX_TWEET_LEN,
+        ))
 
-        # 2. Per-item tweets.
         for i, item in enumerate(items, start=2):
-            tweet = _format_item_tweet(item, i, total)
-            tweets.append(tweet)
+            tweets.append(_format_item_tweet(item, i, total))
 
-        # 3. Closing tweet.
-        closing = (
-            f"({total}/{total}) 더 깊은 분석은 Substack에서 →\n\n"
-            "#AI #MachineLearning #LLM"
+        tweets.append(_fit_text(
+            f"({total}/{total}) 더 깊은 분석은 Substack에서 →\n\n#AI #MachineLearning #LLM",
+            _MAX_TWEET_LEN,
+        ))
+        return tweets
+
+    def _format_new_paper(self, report: Report) -> list[str]:
+        """Weekly research paper thread."""
+        tweets: list[str] = []
+        item_slots = min(self._max_tweets - 2, self._max_items, len(report.items))
+        items = report.items[:item_slots]
+        total = item_slots + 2
+
+        trend_snippet = _fit_text(
+            report.trend_analysis,
+            _MAX_TWEET_LEN - len(report.headline) - len(f"\n\n (1/{total})") - 10,
         )
-        tweets.append(_fit_text(closing, _MAX_TWEET_LEN))
+        tweets.append(_fit_text(
+            f"📄 이번 주 신논문 {len(items)}편\n\n{report.headline}\n\n{trend_snippet}\n\n(1/{total})",
+            _MAX_TWEET_LEN,
+        ))
 
+        for i, item in enumerate(items, start=2):
+            tweets.append(_format_new_paper_tweet(item, i, total))
+
+        tweets.append(_fit_text(
+            f"({total}/{total}) 전체 논문 분석은 뉴스레터에서 →\n\n#AIResearch #MachineLearning #Papers",
+            _MAX_TWEET_LEN,
+        ))
         return tweets
 
 

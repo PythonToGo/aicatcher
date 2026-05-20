@@ -13,7 +13,20 @@ import pytest
 
 from newsbot.models import RawItem, ScoredItem
 from newsbot.scoring.feedback import FeedbackWeighter
-from newsbot.scoring.scorer import Scorer, _build_prompt, _parse_response, _validate_scores
+from newsbot.scoring.scorer import (
+    Scorer,
+    _build_content,
+    _load_prompt,
+    _parse_response,
+    _validate_scores,
+)
+
+
+def _build_prompt(item) -> str:
+    """Compatibility shim: join _build_content blocks to match old single-string API."""
+    static, dynamic = _load_prompt("news")
+    blocks = _build_content(static, dynamic, item)
+    return "".join(b["text"] for b in blocks)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -114,15 +127,15 @@ class TestValidateScores:
         with pytest.raises(ValueError, match="missing key"):
             _validate_scores(data)
 
-    def test_out_of_range_raises(self) -> None:
+    def test_out_of_range_score_raises(self) -> None:
         data = self._valid()
-        data["impact"] = 11.0
+        data["score"] = 11.0  # the composite score, not an axis score
         with pytest.raises(ValueError, match="out of range"):
             _validate_scores(data)
 
-    def test_below_range_raises(self) -> None:
+    def test_below_range_score_raises(self) -> None:
         data = self._valid()
-        data["freshness"] = 0.5
+        data["score"] = 0.5
         with pytest.raises(ValueError, match="out of range"):
             _validate_scores(data)
 

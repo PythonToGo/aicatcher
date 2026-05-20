@@ -1,8 +1,11 @@
 """Analyzer — Deeply analyze ScoredItem values into AnalyzedItem via the Claude API.
 
-Prompt: src/newsbot/generation/prompts/analyzer.md
-Response format: JSON (summary_ko, context, implications, limitations, related_urls)
-Concurrency: asyncio.gather + Semaphore
+Prompts: src/newsbot/generation/prompts/analyzer_{news,new_paper,classic_paper}.md
+Response format: JSON — base fields (summary_ko/context/implications/limitations/related_urls)
+                        + mode-specific extra fields stored in AnalyzedItem.extra
+
+Token optimisation:
+  - Prompt split on ---ITEM--- → static block cached with cache_control=ephemeral.
 """
 
 from __future__ import annotations
@@ -19,13 +22,31 @@ from newsbot.models import AnalyzedItem, ScoredItem
 
 logger = logging.getLogger(__name__)
 
-_PROMPT_PATH = Path(__file__).parent / "prompts" / "analyzer.md"
+_PROMPT_DIR = Path(__file__).parent / "prompts"
+
+_PROMPT_MAP: dict[str, str] = {
+    "news": "analyzer_news.md",
+    "new_paper": "analyzer_new_paper.md",
+    "classic_paper": "analyzer_classic_paper.md",
+}
+
+# Extra fields returned per mode (stored in AnalyzedItem.extra)
+_EXTRA_FIELDS: dict[str, list[str]] = {
+    "news": [],
+    "new_paper": ["methodology", "contributions", "benchmark_results"],
+    "classic_paper": ["historical_context", "why_groundbreaking", "learning_points"],
+}
+
 _MODEL = "claude-sonnet-4-6"
 _TEMPERATURE = 0.5
 _DETAIL_CONTENT_LIMIT = 3000
 _LIGHT_CONTENT_LIMIT = 1500
+_NEW_PAPER_CONTENT_LIMIT = 4000
+_CLASSIC_CONTENT_LIMIT = 5000
 _DETAIL_MAX_TOKENS = 1024
 _LIGHT_MAX_TOKENS = 900
+_NEW_PAPER_MAX_TOKENS = 1200
+_CLASSIC_MAX_TOKENS = 1500
 _MAX_PARSE_RETRIES = 1
 _RETRY_SUFFIX = (
     "\n\nIMPORTANT: Your previous response was not valid complete JSON. "
@@ -33,21 +54,56 @@ _RETRY_SUFFIX = (
     "Do not use markdown fences or extra commentary. Keep each field concise."
 )
 
-
-def _load_prompt() -> str:
-    return _PROMPT_PATH.read_text(encoding="utf-8")
+_BASE_REQUIRED = ("summary_ko", "context", "implications", "limitations")
 
 
-def _build_prompt(item: ScoredItem, content_limit: int = _DETAIL_CONTENT_LIMIT) -> str:
-    template = _load_prompt()
+def _load_prompt(pipeline_mode: str) -> tuple[str, str]:
+    """Return (static_part, dynamic_template) split on ---ITEM---."""
+    filename = _PROMPT_MAP.get(pipeline_mode, _PROMPT_MAP["news"])
+    text = (_PROMPT_DIR / filename).read_text(encoding="utf-8")
+    if "---ITEM---" not in text:
+        return text, ""
+    static, dynamic = text.split("---ITEM---", 1)
+    return static.strip(), dynamic.strip()
+
+
+def _content_limit(pipeline_mode: str, mode: str) -> int:
+    if pipeline_mode == "classic_paper":
+        return _CLASSIC_CONTENT_LIMIT
+    if pipeline_mode == "new_paper":
+        return _NEW_PAPER_CONTENT_LIMIT
+    return _LIGHT_CONTENT_LIMIT if mode == "light" else _DETAIL_CONTENT_LIMIT
+
+
+def _max_tokens(pipeline_mode: str, mode: str) -> int:
+    if pipeline_mode == "classic_paper":
+        return _CLASSIC_MAX_TOKENS
+    if pipeline_mode == "new_paper":
+        return _NEW_PAPER_MAX_TOKENS
+    return _LIGHT_MAX_TOKENS if mode == "light" else _DETAIL_MAX_TOKENS
+
+
+def _build_content(
+    static: str, dynamic_template: str, item: ScoredItem, limit: int
+) -> list[dict]:
     content = item.full_article or item.raw.body
-    return (
-        template
+    dynamic = (
+        dynamic_template
         .replace("{{title}}", item.raw.title)
         .replace("{{source}}", item.raw.source)
         .replace("{{url}}", item.raw.url)
-        .replace("{{content}}", content[:content_limit])
+        .replace("{{content}}", content[:limit])
     )
+    if not static:
+        return [{"type": "text", "text": dynamic}]
+    return [
+        {
+            "type": "text",
+            "text": static,
+            "cache_control": {"type": "ephemeral"},
+        },
+        {"type": "text", "text": dynamic},
+    ]
 
 
 def _parse_response(text: str) -> dict:
@@ -56,8 +112,7 @@ def _parse_response(text: str) -> dict:
 
 
 def _validate_analysis(data: dict) -> None:
-    required = ("summary_ko", "context", "implications", "limitations")
-    for key in required:
+    for key in _BASE_REQUIRED:
         if not data.get(key):
             raise ValueError(f"missing or empty field: {key}")
     if not isinstance(data.get("related_urls", []), list):
@@ -73,17 +128,17 @@ class Analyzer:
         model: str = _MODEL,
         concurrency: int = 5,
         mode: str = "detail",
+        pipeline_mode: str = "news",
     ) -> None:
         self._client = anthropic.AsyncAnthropic(api_key=api_key)
         self._model = model
         self._semaphore = asyncio.Semaphore(concurrency)
         self._mode = mode
-        self._content_limit = (
-            _LIGHT_CONTENT_LIMIT if mode == "light" else _DETAIL_CONTENT_LIMIT
-        )
-        self._max_tokens = (
-            _LIGHT_MAX_TOKENS if mode == "light" else _DETAIL_MAX_TOKENS
-        )
+        self._pipeline_mode = pipeline_mode
+        self._content_limit = _content_limit(pipeline_mode, mode)
+        self._max_tokens = _max_tokens(pipeline_mode, mode)
+        self._static, self._dynamic_tpl = _load_prompt(pipeline_mode)
+        self._extra_keys = _EXTRA_FIELDS.get(pipeline_mode, [])
 
     async def analyze_all(self, items: list[ScoredItem]) -> list[AnalyzedItem]:
         """Analyze all items in parallel and fall back on failure."""
@@ -98,17 +153,24 @@ class Analyzer:
             else:
                 analyzed.append(result)
 
-        logger.info("[analyzer] analyzed %d items", len(analyzed))
+        logger.info(
+            "[analyzer] analyzed %d items (mode=%s pipeline=%s)",
+            len(analyzed), self._mode, self._pipeline_mode,
+        )
         return analyzed
 
     async def analyze_one(self, item: ScoredItem) -> AnalyzedItem:
-        """Analyze a single item for QualityChecker retries."""
+        """Analyze a single item (used by QualityChecker retries)."""
         return await self._analyze_one(item)
 
     async def _analyze_one(self, item: ScoredItem) -> AnalyzedItem:
         async with self._semaphore:
-            prompt = _build_prompt(item, self._content_limit)
-            data = await self._request_valid_analysis(item.raw.title, prompt)
+            content = _build_content(
+                self._static, self._dynamic_tpl, item, self._content_limit
+            )
+            data = await self._request_valid_analysis(item.raw.title, content)
+
+            extra = {k: str(data.get(k, "")) for k in self._extra_keys}
 
             return AnalyzedItem(
                 scored=item,
@@ -117,6 +179,7 @@ class Analyzer:
                 implications=str(data["implications"]),
                 limitations=str(data["limitations"]),
                 related_urls=[str(u) for u in data.get("related_urls", [])],
+                extra=extra,
             )
 
     @staticmethod
@@ -126,18 +189,18 @@ class Analyzer:
             summary_ko=item.raw.body[:200],
             context="분석 중 오류가 발생했습니다.",
             implications="원문을 직접 확인하세요.",
-                limitations="자동 분석 실패 — 내용이 불완전할 수 있습니다.",
+            limitations="자동 분석 실패 — 내용이 불완전할 수 있습니다.",
         )
 
-    async def _request_valid_analysis(self, title: str, prompt: str) -> dict:
-        current_prompt = prompt
+    async def _request_valid_analysis(self, title: str, content: list[dict]) -> dict:
+        current_content = content
         for attempt in range(_MAX_PARSE_RETRIES + 1):
             try:
                 message = await self._client.messages.create(
                     model=self._model,
                     max_tokens=self._max_tokens,
                     temperature=_TEMPERATURE,
-                    messages=[{"role": "user", "content": current_prompt}],
+                    messages=[{"role": "user", "content": current_content}],
                 )
             except anthropic.APIError as exc:
                 logger.warning("[analyzer] API error for '%s': %s", title, exc)
@@ -151,12 +214,15 @@ class Analyzer:
             except (json.JSONDecodeError, ValueError) as exc:
                 logger.warning(
                     "[analyzer] invalid response for '%s' (attempt %d/%d): %s | raw: %s",
-                    title,
-                    attempt + 1,
-                    _MAX_PARSE_RETRIES + 1,
-                    exc,
-                    raw_text[:200],
+                    title, attempt + 1, _MAX_PARSE_RETRIES + 1, exc, raw_text[:200],
                 )
                 if attempt >= _MAX_PARSE_RETRIES:
                     raise ValueError(f"invalid analyzer response: {exc}") from exc
-                current_prompt = prompt + _RETRY_SUFFIX
+                # On retry, append correction instruction to the last text block
+                retry_content = list(current_content)
+                retry_content[-1] = {
+                    "type": "text",
+                    "text": retry_content[-1]["text"] + _RETRY_SUFFIX,
+                }
+                current_content = retry_content
+        raise ValueError("analyzer: exceeded max retries without valid response")
