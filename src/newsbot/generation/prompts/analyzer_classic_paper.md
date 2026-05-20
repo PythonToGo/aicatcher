@@ -9,14 +9,14 @@ Respond **entirely in Korean** (URLs and author names excepted).
 Respond with **only** valid JSON — no fences, no extra text:
 
 {
-  "summary_ko": "<이 논문이 무엇을 제안했는지 3–4 sentences. 당시 문제 → 핵심 아이디어 → 결과>",
-  "context": "<이 논문이 발표될 당시 분야의 상황. 어떤 문제가 미해결이었는가? 2–3 sentences>",
-  "implications": "<이 논문이 이후 AI/ML 분야에 만들어낸 변화. 어떤 연구나 기술을 가능하게 했는가? 2–3 sentences>",
-  "limitations": "<이 논문의 한계 및 이후 연구로 극복된 부분. 1–2 sentences>",
-  "related_urls": ["<url1>"],
-  "historical_context": "<발표 당시 배경: 어떤 지배적인 패러다임에 도전했는가? 어떤 선행 연구 위에 쌓였는가? 2–3 sentences>",
-  "why_groundbreaking": "<왜 혁신적이었는가? 무엇이 기존과 달랐는가? 2 sentences>",
-  "learning_points": "<오늘날 개발자가 이 논문에서 배울 수 있는 핵심 3가지. 번호 목록: 1. ...\n2. ...\n3. ...>"
+  "summary_ko": "<이 논문이 무엇을 제안했는지 2–3 sentences. 당시 문제 → 핵심 아이디어 → 결과>",
+  "context": "<이 논문이 발표될 당시 분야의 상황. 어떤 문제가 미해결이었는가? 2 sentences>",
+  "implications": "<이 논문이 이후 AI/ML 분야에 만들어낸 변화. 2 sentences>",
+  "limitations": "<이 논문의 한계 및 이후 연구로 극복된 부분. 1 sentence>",
+  "related_urls": [],
+  "historical_context": "<발표 당시 배경: 어떤 패러다임에 도전했는가? 2 sentences>",
+  "why_groundbreaking": "<왜 혁신적이었는가? 기존의 X 방식 대신 Y를 써서 Z를 달성했다 형식. 1–2 sentences>",
+  "learning_points": "<오늘날 실무에서 배울 핵심 3가지. 번호 목록: 1. ...\n2. ...\n3. ...>"
 }
 
 ## Guidelines
