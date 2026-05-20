@@ -2,6 +2,62 @@
 
 ---
 
+## [Phase F] 테스트 — `tests/test_multi_channel.py` — 2026-05-20
+
+### 개요
+
+Phase A–E에서 도입된 멀티채널 파이프라인 전체를 커버하는 테스트 파일(`tests/test_multi_channel.py`) 작성.
+92개 테스트, 모두 통과.
+
+---
+
+### 신규 파일
+
+#### `tests/test_multi_channel.py`
+
+| 클래스 | 테스트 수 | 커버 대상 |
+|--------|-----------|-----------|
+| `TestRawItemContentType` | 5 | `RawItem.content_type` 유효값/무효값 검증 |
+| `TestAnalyzedItemExtra` | 3 | `AnalyzedItem.extra` 기본값 격리 및 저장 |
+| `TestReportPipelineMode` | 3 | `Report.pipeline_mode` 기본값 및 3개 모드 |
+| `TestSettingsPipelineMode` | 8 | `pipeline_mode` 검증기, `effective_items_per_report` 모드별 분기 |
+| `TestScorerModeAware` | 7 | `_PROMPT_MAP`, `_load_prompt`, `_build_content` 캐시 구조 |
+| `TestAnalyzerModeAware` | 11 | content limit/max_tokens 모드별 상수, extra 키 설정, API 모킹으로 extra 필드 채워짐 검증 |
+| `TestSynthesizerModeAware` | 4 | max_tokens 모드별 라우팅, `Report.pipeline_mode` 전파 |
+| `TestSemanticScholarCollector` | 14 | 시드 로드, 배치 회전, `_seed_to_raw` content_type, API fallback 모킹 |
+| `TestBuildRegistry` | 6 | 모드별 수집기 등록, api_key 전달, 미지원 모드 fallback |
+| `TestTwitterFormatterModes` | 9 | classic_paper→3트윗/📚, new_paper→📄/#AIResearch, news→#AI |
+| `TestClassicPaperMd` | 8 | 조건부 섹션 (extra 없으면 생략), report_id 포함 |
+| `TestClassicPaperHtml` | 5 | DOCTYPE, 녹색 헤더(#065f46), 뱃지 텍스트, 빈 extra 섹션 미출력 |
+| `TestEmailHtmlRouting` | 6 | 모드별 헤더 색상 분기, 뱃지 텍스트 |
+| `TestBuildReportMdRouting` | 7 | 모드별 마크다운 렌더러 라우팅, extra 필드 렌더링 |
+
+**테스트 원칙**
+
+- 실제 네트워크/API 호출 없음 — `AsyncMock + patch` 로 Claude API 대체
+- `SemanticScholarCollector` API fallback도 `httpx.AsyncClient` 패치로 처리
+- `Settings` 는 `@lru_cache` 우회를 위해 직접 인스턴스화 (`Settings(**kwargs)`)
+- 시드 로드·배치 회전은 실제 `data/classic_papers_seed.json` 파일 사용
+
+---
+
+### 기존 테스트 파일 수정
+
+#### `tests/test_scoring.py`
+
+- `_build_prompt` 임포트 → `_build_content + _load_prompt` 호환 shim으로 교체
+- `TestValidateScores.test_out_of_range_raises` / `test_below_range_raises`:
+  `impact`/`freshness` 축 점수가 아닌 합산 `score` 필드 검증으로 수정
+  (모드별 축 이름이 다르므로 새 `_validate_scores`는 `score`/`reason`만 검증)
+
+#### `tests/test_generation.py`
+
+- `_build_prompt as _build_analyzer_prompt` / `_build_synth_prompt` 임포트 →
+  `_build_content + _load_prompt` 호환 shim으로 교체
+- `_items_to_json([item])` → `_items_to_json([item], "news", "detail")` 인자 수정
+
+---
+
 ## [Phase E] 포맷터 + 엔트리포인트 + 워크플로 — 2026-05-20
 
 ### 개요

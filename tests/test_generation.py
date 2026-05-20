@@ -11,13 +11,36 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from newsbot.generation.analyzer import Analyzer, _build_prompt as _build_analyzer_prompt
+from newsbot.generation.analyzer import (
+    Analyzer,
+    _build_content as _analyzer_build_content,
+    _content_limit,
+    _load_prompt as _analyzer_load_prompt,
+)
 from newsbot.generation.fetcher import Fetcher, _extract_text, _should_skip
 from newsbot.generation.synthesizer import (
     Synthesizer,
-    _build_prompt as _build_synth_prompt,
+    _build_content as _synth_build_content,
     _items_to_json,
+    _load_prompt as _synth_load_prompt,
 )
+
+
+# ── Compatibility shims for renamed functions ─────────────────────────────────
+
+def _build_analyzer_prompt(item) -> str:
+    """Wrap new _build_content API to return joined text (for legacy tests)."""
+    static, dynamic = _analyzer_load_prompt("news")
+    limit = _content_limit("news", "detail")
+    blocks = _analyzer_build_content(static, dynamic, item, limit)
+    return "".join(b["text"] for b in blocks)
+
+
+def _build_synth_prompt(items, hours_back: int = 24) -> str:
+    """Wrap new _build_content API to return joined text (for legacy tests)."""
+    static, tpl = _synth_load_prompt("news")
+    blocks = _synth_build_content(static, tpl, items, len(items), hours_back, "news", "detail")
+    return "".join(b["text"] for b in blocks)
 from newsbot.models import AnalyzedItem, RawItem, Report, ScoredItem
 
 
@@ -300,13 +323,13 @@ class TestAnalyzer:
 class TestItemsToJson:
     def test_serializes_all_fields(self) -> None:
         item = _make_analyzed("Test Title")
-        output = json.loads(_items_to_json([item]))
+        output = json.loads(_items_to_json([item], "news", "detail"))
         assert output[0]["title"] == "Test Title"
         assert output[0]["summary_ko"] == "GPT-5가 출시되었습니다."
         assert output[0]["score"] == 8.0
 
     def test_empty_list(self) -> None:
-        assert _items_to_json([]) == "[]"
+        assert _items_to_json([], "news", "detail") == "[]"
 
 
 class TestBuildSynthPrompt:
