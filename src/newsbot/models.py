@@ -13,10 +13,11 @@ class RawItem:
     title: str
     url: str
     body: str           # article summary or lead paragraph
-    source: str         # "hackernews" | "arxiv" | "reddit" | "rss" | "github" | "huggingface"
+    source: str         # "hackernews" | "arxiv" | "reddit" | "rss" | "github" | "huggingface" | "semantic_scholar"
     published_at: datetime
     raw_score: float    # source-native score (HN points, arXiv citations, upvotes, etc.)
     metadata: dict = field(default_factory=dict)
+    content_type: str = "news"  # "news" | "new_paper" | "classic_paper"
 
     def __post_init__(self) -> None:
         if not self.title:
@@ -25,6 +26,9 @@ class RawItem:
             raise ValueError("RawItem.url must not be empty")
         if not self.source:
             raise ValueError("RawItem.source must not be empty")
+        valid_types = {"news", "new_paper", "classic_paper"}
+        if self.content_type not in valid_types:
+            raise ValueError(f"RawItem.content_type must be one of {valid_types}, got '{self.content_type}'")
 
 
 @dataclass
@@ -47,6 +51,8 @@ class AnalyzedItem:
     implications: str   # practical implications for practitioners
     limitations: str    # limitations and open questions
     related_urls: list[str] = field(default_factory=list)
+    # mode-specific extra fields (new_paper: contributions/benchmark_results, classic_paper: historical_context/learning_points)
+    extra: dict = field(default_factory=dict)
 
     # convenience properties
     @property
@@ -70,6 +76,7 @@ class Report:
     trend_analysis: str
     thumbnail_path: str = ""
     language: str = "ko"        # "ko" | "en" (Phase 2)
+    pipeline_mode: str = "news" # "news" | "new_paper" | "classic_paper"
     generated_at: datetime = field(default_factory=_utcnow)
 
     def __post_init__(self) -> None:

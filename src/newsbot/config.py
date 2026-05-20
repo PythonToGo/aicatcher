@@ -57,8 +57,14 @@ class Settings(BaseSettings):
 
     # behaviour settings
     content_topic: str = Field(default="AI/ML")
+    pipeline_mode: str = Field(
+        default="news",
+        description="Content pipeline mode: 'news' | 'new_paper' | 'classic_paper'",
+    )
     items_per_report: int = Field(default=6, ge=1, le=20)
     items_per_weekly: int = Field(default=12, ge=1, le=30)
+    items_per_new_paper: int = Field(default=5, ge=1, le=10, description="Top papers to analyze per new_paper run")
+    items_per_classic: int = Field(default=1, ge=1, le=3, description="Classic papers per run (usually 1)")
     quality_min_score: float = Field(default=0.8, ge=0.0, le=1.0)
     dedup_similarity_threshold: float = Field(default=0.92, ge=0.0, le=1.0)
     default_language: str = Field(default="ko")
@@ -72,6 +78,14 @@ class Settings(BaseSettings):
     dry_run: bool = Field(default=False)
     mock_claude: bool = Field(default=False, description="Run the full pipeline with mock responses instead of calling the API")
     log_level: str = Field(default="INFO")
+
+    @field_validator("pipeline_mode")
+    @classmethod
+    def validate_pipeline_mode(cls, v: str) -> str:
+        valid = {"news", "new_paper", "classic_paper"}
+        if v not in valid:
+            raise ValueError(f"pipeline_mode must be one of {valid}, got '{v}'")
+        return v
 
     @field_validator("default_language")
     @classmethod
@@ -125,6 +139,15 @@ class Settings(BaseSettings):
     @property
     def email_configured(self) -> bool:
         return bool(self.gmail_address and self.gmail_app_password and self.email_recipients)
+
+    @property
+    def effective_items_per_report(self) -> int:
+        """Return the correct item count for the current pipeline_mode."""
+        if self.pipeline_mode == "classic_paper":
+            return self.items_per_classic
+        if self.pipeline_mode == "new_paper":
+            return self.items_per_new_paper
+        return self.items_per_report
 
 
 @lru_cache(maxsize=1)
