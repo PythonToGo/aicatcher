@@ -5,6 +5,7 @@
 - Atom feed parsed with httpx + lxml
 """
 
+import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
@@ -23,6 +24,11 @@ _NS = {
     "atom": "http://www.w3.org/2005/Atom",
     "arxiv": "http://arxiv.org/schemas/atom",
 }
+_HEADERS = {
+    "User-Agent": "ai-catcher/1.0 (https://github.com/PythonToGo/ai-catcher; research bot)",
+}
+_MAX_RETRIES = 3
+_RETRY_BACKOFF = 5  # seconds between retries
 
 
 class ArxivCollector(BaseCollector):
@@ -32,7 +38,7 @@ class ArxivCollector(BaseCollector):
         self,
         max_results: int = 50,
         hours_back: int = 48,
-        timeout: float = 15.0,
+        timeout: float = 30.0,
     ) -> None:
         self._max_results = max_results
         self._hours_back = hours_back
@@ -43,17 +49,31 @@ class ArxivCollector(BaseCollector):
         return "arxiv"
 
     async def collect(self) -> list[RawItem]:
-        try:
-            async with httpx.AsyncClient(timeout=self._timeout) as client:
-                feed_xml = await self._fetch_feed(client)
-        except Exception as exc:
-            self._log_error("failed to fetch arXiv feed", exc)
+        feed_xml = await self._fetch_with_retry()
+        if feed_xml is None:
             return []
 
         cutoff = datetime.now(timezone.utc) - timedelta(hours=self._hours_back)
         items = self._parse_feed(feed_xml, cutoff)
         self._log_collected(len(items))
         return items
+
+    async def _fetch_with_retry(self) -> bytes | None:
+        for attempt in range(1, _MAX_RETRIES + 1):
+            try:
+                async with httpx.AsyncClient(
+                    timeout=self._timeout, headers=_HEADERS, follow_redirects=True
+                ) as client:
+                    return await self._fetch_feed(client)
+            except Exception as exc:
+                logger.warning(
+                    "[arxiv] fetch attempt %d/%d failed: %s",
+                    attempt, _MAX_RETRIES, exc,
+                )
+                if attempt < _MAX_RETRIES:
+                    await asyncio.sleep(_RETRY_BACKOFF * attempt)
+        self._log_error("failed to fetch arXiv feed after %d attempts" % _MAX_RETRIES, Exception())
+        return None
 
     async def _fetch_feed(self, client: httpx.AsyncClient) -> bytes:
         # combine categories with OR into a single query
