@@ -1,0 +1,479 @@
+[
+  {
+    "title": "Attention Is All You Need",
+    "url": "https://arxiv.org/abs/1706.03762",
+    "year": 2017,
+    "citation_count": 90000,
+    "venue": "NeurIPS 2017",
+    "authors": ["Ashish Vaswani", "Noam Shazeer", "Niki Parmar"],
+    "abstract": "We propose the Transformer, a model architecture eschewing recurrence and instead relying entirely on an attention mechanism to draw global dependencies between input and output. The Transformer allows for significantly more parallelization and achieves state-of-the-art on machine translation tasks."
+  },
+  {
+    "title": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+    "url": "https://arxiv.org/abs/1810.04805",
+    "year": 2018,
+    "citation_count": 75000,
+    "venue": "NAACL 2019",
+    "authors": ["Jacob Devlin", "Ming-Wei Chang", "Kenton Lee"],
+    "abstract": "We introduce BERT, a new language representation model designed to pre-train deep bidirectional representations from unlabeled text by jointly conditioning on both left and right context in all layers. BERT obtains new state-of-the-art results on eleven NLP tasks."
+  },
+  {
+    "title": "Deep Residual Learning for Image Recognition",
+    "url": "https://arxiv.org/abs/1512.03385",
+    "year": 2015,
+    "citation_count": 180000,
+    "venue": "CVPR 2016",
+    "authors": ["Kaiming He", "Xiangyu Zhang", "Shaoqing Ren"],
+    "abstract": "We present a residual learning framework to ease the training of networks that are substantially deeper than those used previously. We provide comprehensive empirical evidence showing that these residual networks are easier to optimize, and can gain accuracy from considerably increased depth."
+  },
+  {
+    "title": "Generative Adversarial Nets",
+    "url": "https://arxiv.org/abs/1406.2661",
+    "year": 2014,
+    "citation_count": 65000,
+    "venue": "NeurIPS 2014",
+    "authors": ["Ian Goodfellow", "Jean Pouget-Abadie", "Mehdi Mirza"],
+    "abstract": "We propose a new framework for estimating generative models via an adversarial process, in which we simultaneously train two models: a generative model G that captures the data distribution, and a discriminative model D that estimates the probability that a sample came from the training data rather than G."
+  },
+  {
+    "title": "Auto-Encoding Variational Bayes",
+    "url": "https://arxiv.org/abs/1312.6114",
+    "year": 2013,
+    "citation_count": 35000,
+    "venue": "ICLR 2014",
+    "authors": ["Diederik P. Kingma", "Max Welling"],
+    "abstract": "We introduce a stochastic variational inference and learning algorithm that scales to large datasets and, under some mild differentiability conditions, even works in the intractable case. We coin the algorithm Variational Bayes, and show how the model can be interpreted as an auto-encoder."
+  },
+  {
+    "title": "Adam: A Method for Stochastic Optimization",
+    "url": "https://arxiv.org/abs/1412.6980",
+    "year": 2014,
+    "citation_count": 120000,
+    "venue": "ICLR 2015",
+    "authors": ["Diederik P. Kingma", "Jimmy Ba"],
+    "abstract": "We introduce Adam, an algorithm for first-order gradient-based optimization of stochastic objective functions, based on adaptive estimates of lower-order moments. The method is straightforward to implement, is computationally efficient, has little memory requirements, is invariant to diagonal rescaling of the gradients, and is well suited for problems that are large in terms of data and/or parameters."
+  },
+  {
+    "title": "Batch Normalization: Accelerating Deep Network Training",
+    "url": "https://arxiv.org/abs/1502.03167",
+    "year": 2015,
+    "citation_count": 50000,
+    "venue": "ICML 2015",
+    "authors": ["Sergey Ioffe", "Christian Szegedy"],
+    "abstract": "Training deep neural networks is complicated by the fact that the distribution of each layer's inputs changes during training, as the parameters of the previous layers change. We refer to this phenomenon as internal covariate shift, and address the problem by normalizing layer inputs."
+  },
+  {
+    "title": "Dropout: A Simple Way to Prevent Neural Networks from Overfitting",
+    "url": "https://jmlr.org/papers/v15/srivastava14a.html",
+    "year": 2014,
+    "citation_count": 40000,
+    "venue": "JMLR 2014",
+    "authors": ["Nitish Srivastava", "Geoffrey Hinton", "Alex Krizhevsky"],
+    "abstract": "We describe a technique called dropout that addresses the problem of overfitting in neural networks. The key idea is to randomly drop units (along with their connections) from the neural network during training. This prevents units from co-adapting too much."
+  },
+  {
+    "title": "ImageNet Classification with Deep Convolutional Neural Networks (AlexNet)",
+    "url": "https://papers.nips.cc/paper/2012/hash/c399862d3b9d6b76c8436e924a68c45b-Abstract.html",
+    "year": 2012,
+    "citation_count": 120000,
+    "venue": "NeurIPS 2012",
+    "authors": ["Alex Krizhevsky", "Ilya Sutskever", "Geoffrey E. Hinton"],
+    "abstract": "We trained a large, deep convolutional neural network to classify the 1.2 million high-resolution images in the ImageNet LSVRC-2010 contest into the 1000 different classes. On the test data, we achieved top-1 and top-5 error rates of 37.5% and 17.0%, which is considerably better than the previous state-of-the-art."
+  },
+  {
+    "title": "Sequence to Sequence Learning with Neural Networks",
+    "url": "https://arxiv.org/abs/1409.3215",
+    "year": 2014,
+    "citation_count": 30000,
+    "venue": "NeurIPS 2014",
+    "authors": ["Ilya Sutskever", "Oriol Vinyals", "Quoc V. Le"],
+    "abstract": "We present a general end-to-end approach to sequence learning that makes minimal assumptions on the sequence structure. Our method uses a multilayered Long Short-Term Memory (LSTM) to map the input sequence to a vector of a fixed dimensionality, and then another deep LSTM to decode the target sequence from the vector."
+  },
+  {
+    "title": "Neural Machine Translation by Jointly Learning to Align and Translate",
+    "url": "https://arxiv.org/abs/1409.0473",
+    "year": 2014,
+    "citation_count": 25000,
+    "venue": "ICLR 2015",
+    "authors": ["Dzmitry Bahdanau", "Kyunghyun Cho", "Yoshua Bengio"],
+    "abstract": "We conjecture that the use of a fixed-length vector is a bottleneck in improving the performance of the encoder–decoder architecture. We propose to extend this by allowing a model to automatically (soft-)search for parts of a source sentence that are relevant to predicting a target word."
+  },
+  {
+    "title": "Very Deep Convolutional Networks for Large-Scale Image Recognition (VGGNet)",
+    "url": "https://arxiv.org/abs/1409.1556",
+    "year": 2014,
+    "citation_count": 85000,
+    "venue": "ICLR 2015",
+    "authors": ["Karen Simonyan", "Andrew Zisserman"],
+    "abstract": "We investigate the effect of the convolutional network depth on its accuracy in the large-scale image recognition setting. Our main contribution is a thorough evaluation of networks of increasing depth using an architecture with very small (3x3) convolution filters."
+  },
+  {
+    "title": "U-Net: Convolutional Networks for Biomedical Image Segmentation",
+    "url": "https://arxiv.org/abs/1505.04597",
+    "year": 2015,
+    "citation_count": 55000,
+    "venue": "MICCAI 2015",
+    "authors": ["Olaf Ronneberger", "Philipp Fischer", "Thomas Brox"],
+    "abstract": "There is large consent that successful training of deep networks requires many thousand annotated training samples. We present a network and training strategy that relies on the strong use of data augmentation to use the available annotated samples more efficiently."
+  },
+  {
+    "title": "You Only Look Once: Unified, Real-Time Object Detection (YOLO)",
+    "url": "https://arxiv.org/abs/1506.02640",
+    "year": 2015,
+    "citation_count": 30000,
+    "venue": "CVPR 2016",
+    "authors": ["Joseph Redmon", "Santosh Divvala", "Ross Girshick"],
+    "abstract": "We present YOLO, a new approach to object detection. Prior work on object detection repurposes classifiers to perform detection. Instead, we frame object detection as a regression problem to spatially separated bounding boxes and associated class probabilities."
+  },
+  {
+    "title": "Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks",
+    "url": "https://arxiv.org/abs/1506.01497",
+    "year": 2015,
+    "citation_count": 50000,
+    "venue": "NeurIPS 2015",
+    "authors": ["Shaoqing Ren", "Kaiming He", "Ross Girshick"],
+    "abstract": "We introduce a Region Proposal Network (RPN) that shares full-image convolutional features with the detection network, thus enabling nearly cost-free region proposals. A RPN is a fully convolutional network that simultaneously predicts object bounds and objectness scores at each position."
+  },
+  {
+    "title": "Mastering the Game of Go with Deep Neural Networks and Tree Search (AlphaGo)",
+    "url": "https://www.nature.com/articles/nature16961",
+    "year": 2016,
+    "citation_count": 15000,
+    "venue": "Nature 2016",
+    "authors": ["David Silver", "Aja Huang", "Chris J. Maddison"],
+    "abstract": "The game of Go has long been viewed as the most challenging of classic games for artificial intelligence owing to its enormous search space and the difficulty of evaluating board positions and moves. Here we introduce a new approach to computer Go that uses value networks and policy networks to evaluate positions and select moves."
+  },
+  {
+    "title": "Human-level control through deep reinforcement learning (DQN)",
+    "url": "https://www.nature.com/articles/nature14236",
+    "year": 2015,
+    "citation_count": 25000,
+    "venue": "Nature 2015",
+    "authors": ["Volodymyr Mnih", "Koray Kavukcuoglu", "David Silver"],
+    "abstract": "We use recent advances in training deep neural networks to develop a novel artificial agent, termed a deep Q-network, that can learn successful policies directly from high-dimensional sensory inputs using end-to-end reinforcement learning."
+  },
+  {
+    "title": "Proximal Policy Optimization Algorithms (PPO)",
+    "url": "https://arxiv.org/abs/1707.06347",
+    "year": 2017,
+    "citation_count": 15000,
+    "venue": "arXiv 2017",
+    "authors": ["John Schulman", "Filip Wolski", "Prafulla Dhariwal"],
+    "abstract": "We propose a new family of policy gradient methods for reinforcement learning, which alternate between sampling data through interaction with the environment, and optimizing a surrogate objective function using stochastic gradient ascent."
+  },
+  {
+    "title": "Distributed Representations of Words and Phrases (Word2Vec)",
+    "url": "https://arxiv.org/abs/1310.4546",
+    "year": 2013,
+    "citation_count": 30000,
+    "venue": "NeurIPS 2013",
+    "authors": ["Tomas Mikolov", "Ilya Sutskever", "Kai Chen"],
+    "abstract": "We present several extensions that improve both the quality and the training speed of word vectors. Distributed Representations of Words and Phrases are learned using a neural network with a single hidden layer on a large text corpus."
+  },
+  {
+    "title": "GloVe: Global Vectors for Word Representation",
+    "url": "https://nlp.stanford.edu/pubs/glove.pdf",
+    "year": 2014,
+    "citation_count": 25000,
+    "venue": "EMNLP 2014",
+    "authors": ["Jeffrey Pennington", "Richard Socher", "Christopher Manning"],
+    "abstract": "We propose a new global log-bilinear regression model for the unsupervised learning of word representations that outperforms other models on word analogy, word similarity, and named entity recognition tasks."
+  },
+  {
+    "title": "Deep contextualized word representations (ELMo)",
+    "url": "https://arxiv.org/abs/1802.05365",
+    "year": 2018,
+    "citation_count": 15000,
+    "venue": "NAACL 2018",
+    "authors": ["Matthew E. Peters", "Mark Neumann", "Mohit Iyyer"],
+    "abstract": "We introduce a new type of deep contextualized word representation that models both complex characteristics of word use and how these uses vary across linguistic contexts. Our word vectors are learned functions of the internal states of a deep bidirectional language model (biLM), which is pre-trained on a large text corpus."
+  },
+  {
+    "title": "Language Models are Unsupervised Multitask Learners (GPT-2)",
+    "url": "https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf",
+    "year": 2019,
+    "citation_count": 15000,
+    "venue": "OpenAI Blog 2019",
+    "authors": ["Alec Radford", "Jeffrey Wu", "Rewon Child"],
+    "abstract": "Natural language processing tasks, such as question answering, machine translation, reading comprehension, and summarization, are typically approached with supervised learning on task specific datasets. We demonstrate that language models begin to learn these tasks without any explicit supervision."
+  },
+  {
+    "title": "Improving Language Understanding by Generative Pre-Training (GPT)",
+    "url": "https://s3-us-west-2.amazonaws.com/openai-assets/research-covers/language-unsupervised/language_understanding_paper.pdf",
+    "year": 2018,
+    "citation_count": 8000,
+    "venue": "OpenAI Blog 2018",
+    "authors": ["Alec Radford", "Karthik Narasimhan", "Tim Salimans"],
+    "abstract": "We demonstrate that large gains on natural language understanding tasks can be realized by generative pre-training of a language model on a diverse corpus of unlabeled text, followed by discriminative fine-tuning on each specific task."
+  },
+  {
+    "title": "Asynchronous Methods for Deep Reinforcement Learning (A3C)",
+    "url": "https://arxiv.org/abs/1602.01783",
+    "year": 2016,
+    "citation_count": 12000,
+    "venue": "ICML 2016",
+    "authors": ["Volodymyr Mnih", "Adria Puigdomenech Badia", "Mehdi Mirza"],
+    "abstract": "We propose a conceptually simple and lightweight framework for deep reinforcement learning that uses asynchronous gradient descent for optimization of deep neural network controllers."
+  },
+  {
+    "title": "Feature Pyramid Networks for Object Detection",
+    "url": "https://arxiv.org/abs/1612.03144",
+    "year": 2016,
+    "citation_count": 20000,
+    "venue": "CVPR 2017",
+    "authors": ["Tsung-Yi Lin", "Piotr Dollar", "Ross Girshick"],
+    "abstract": "Feature pyramids are a basic component in recognition systems for detecting objects at different scales. We exploit the inherent multi-scale, pyramidal hierarchy of deep convolutional networks to construct feature pyramids with marginal extra cost."
+  },
+  {
+    "title": "Mask R-CNN",
+    "url": "https://arxiv.org/abs/1703.06870",
+    "year": 2017,
+    "citation_count": 30000,
+    "venue": "ICCV 2017",
+    "authors": ["Kaiming He", "Georgia Gkioxari", "Piotr Dollar"],
+    "abstract": "We present a conceptually simple, flexible, and general framework for object instance segmentation. Our approach efficiently detects objects in an image while simultaneously generating a high-quality segmentation mask for each instance."
+  },
+  {
+    "title": "WaveNet: A Generative Model for Raw Audio",
+    "url": "https://arxiv.org/abs/1609.03499",
+    "year": 2016,
+    "citation_count": 8000,
+    "venue": "arXiv 2016",
+    "authors": ["Aaron van den Oord", "Sander Dieleman", "Heiga Zen"],
+    "abstract": "This paper introduces WaveNet, a deep neural network for generating raw audio waveforms. The model is fully probabilistic and autoregressive, with the predictive distribution for each audio sample conditioned on all previous ones."
+  },
+  {
+    "title": "Semi-supervised Sequence Learning (LSTM pre-training)",
+    "url": "https://arxiv.org/abs/1511.01432",
+    "year": 2015,
+    "citation_count": 2000,
+    "venue": "NeurIPS 2015",
+    "authors": ["Andrew M. Dai", "Quoc V. Le"],
+    "abstract": "We present a study of semi-supervised sequence learning methods that can be used to improve both sequence classification and sequence prediction tasks. We find that training an LSTM language model on unlabeled data and then using it to initialize a supervised model improves generalization."
+  },
+  {
+    "title": "Long Short-Term Memory",
+    "url": "https://www.bioinf.jku.at/publications/older/2604.pdf",
+    "year": 1997,
+    "citation_count": 100000,
+    "venue": "Neural Computation 1997",
+    "authors": ["Sepp Hochreiter", "Jurgen Schmidhuber"],
+    "abstract": "Learning to store information over extended time intervals by recurrent backpropagation takes a very long time, mostly because of insufficient, decaying error backflow. We briefly review Hochreiter's analysis of this problem, then address it by introducing a novel, efficient, gradient based method called long short-term memory (LSTM)."
+  },
+  {
+    "title": "Unsupervised Representation Learning with Deep Convolutional GANs (DCGAN)",
+    "url": "https://arxiv.org/abs/1511.06434",
+    "year": 2015,
+    "citation_count": 15000,
+    "venue": "ICLR 2016",
+    "authors": ["Alec Radford", "Luke Metz", "Soumith Chintala"],
+    "abstract": "We introduce a class of CNNs called deep convolutional generative adversarial networks (DCGANs), and demonstrate that they have a set of constraints that make them stable to train in most settings. Importantly, we demonstrate that the generators have interesting vector arithmetic properties."
+  },
+  {
+    "title": "Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer (T5)",
+    "url": "https://arxiv.org/abs/1910.10683",
+    "year": 2019,
+    "citation_count": 12000,
+    "venue": "JMLR 2020",
+    "authors": ["Colin Raffel", "Noam Shazeer", "Adam Roberts"],
+    "abstract": "We introduce a unified framework that converts all text-based language problems into a text-to-text format. We systematically study transfer learning for NLP using a large dataset, large model, and careful comparison of different methods."
+  },
+  {
+    "title": "Momentum Contrast for Unsupervised Visual Representation Learning (MoCo)",
+    "url": "https://arxiv.org/abs/1911.05722",
+    "year": 2019,
+    "citation_count": 8000,
+    "venue": "CVPR 2020",
+    "authors": ["Kaiming He", "Haoqi Fan", "Yuxin Wu"],
+    "abstract": "We present Momentum Contrast (MoCo) for unsupervised visual representation learning. From a perspective on contrastive learning as dictionary look-up, we build a dynamic dictionary with a queue and a moving-averaged encoder."
+  },
+  {
+    "title": "A Simple Framework for Contrastive Learning (SimCLR)",
+    "url": "https://arxiv.org/abs/2002.05709",
+    "year": 2020,
+    "citation_count": 10000,
+    "venue": "ICML 2020",
+    "authors": ["Ting Chen", "Simon Kornblith", "Mohammad Norouzi"],
+    "abstract": "This paper presents SimCLR: a simple framework for contrastive learning of visual representations. We simplify recently proposed contrastive self-supervised learning algorithms without requiring specialized architectures or a memory bank."
+  },
+  {
+    "title": "EfficientNet: Rethinking Model Scaling for Convolutional Neural Networks",
+    "url": "https://arxiv.org/abs/1905.11946",
+    "year": 2019,
+    "citation_count": 15000,
+    "venue": "ICML 2019",
+    "authors": ["Mingxing Tan", "Quoc V. Le"],
+    "abstract": "We systematically study model scaling and identify that carefully balancing network depth, width, and resolution can lead to better performance. We propose a new scaling method that uniformly scales all dimensions of depth/width/resolution using a simple yet highly effective compound coefficient."
+  },
+  {
+    "title": "Learning Transferable Visual Models From Natural Language Supervision (CLIP)",
+    "url": "https://arxiv.org/abs/2103.00020",
+    "year": 2021,
+    "citation_count": 18000,
+    "venue": "ICML 2021",
+    "authors": ["Alec Radford", "Jong Wook Kim", "Chris Hallacy"],
+    "abstract": "State-of-the-art computer vision systems are trained to predict a fixed set of predetermined object categories. This restricted form of supervision limits their generality and usability. We demonstrate that the simple pre-training task of predicting which caption goes with which image is an efficient and scalable way to learn SOTA image representations from scratch."
+  },
+  {
+    "title": "Semi-Supervised Classification with Graph Convolutional Networks (GCN)",
+    "url": "https://arxiv.org/abs/1609.02907",
+    "year": 2016,
+    "citation_count": 20000,
+    "venue": "ICLR 2017",
+    "authors": ["Thomas N. Kipf", "Max Welling"],
+    "abstract": "We present a scalable approach for semi-supervised classification of nodes in a graph, using a variant of convolutional neural networks which operate directly on graphs. Our model scales linearly in the number of graph edges."
+  },
+  {
+    "title": "Graph Attention Networks (GAT)",
+    "url": "https://arxiv.org/abs/1710.10903",
+    "year": 2017,
+    "citation_count": 12000,
+    "venue": "ICLR 2018",
+    "authors": ["Petar Velickovic", "Guillem Cucurull", "Arantxa Casanova"],
+    "abstract": "We present graph attention networks (GATs), novel neural network architectures that operate on graph-structured data, leveraging masked self-attentional layers to address the shortcomings of prior methods based on graph convolutions or their approximations."
+  },
+  {
+    "title": "Neural Turing Machines",
+    "url": "https://arxiv.org/abs/1410.5401",
+    "year": 2014,
+    "citation_count": 5000,
+    "venue": "arXiv 2014",
+    "authors": ["Alex Graves", "Greg Wayne", "Ivo Danihelka"],
+    "abstract": "We extend the capabilities of neural networks by coupling them to external memory resources which they can interact with by attentional processes. The combined system is analogous to a Turing Machine or Von Neumann architecture but is differentiable end-to-end."
+  },
+  {
+    "title": "Denoising Diffusion Probabilistic Models (DDPM)",
+    "url": "https://arxiv.org/abs/2006.11239",
+    "year": 2020,
+    "citation_count": 12000,
+    "venue": "NeurIPS 2020",
+    "authors": ["Jonathan Ho", "Ajay Jain", "Pieter Abbeel"],
+    "abstract": "We present high quality image synthesis results using diffusion probabilistic models, a class of latent variable models inspired by considerations from nonequilibrium thermodynamics. Our best results are obtained by training on a weighted variational bound designed according to a novel connection between diffusion probabilistic models and denoising score matching with Langevin dynamics."
+  },
+  {
+    "title": "A Neural Algorithm of Artistic Style (Neural Style Transfer)",
+    "url": "https://arxiv.org/abs/1508.06576",
+    "year": 2015,
+    "citation_count": 8000,
+    "venue": "arXiv 2015",
+    "authors": ["Leon A. Gatys", "Alexander S. Ecker", "Matthias Bethge"],
+    "abstract": "A fundamental problem in artificial intelligence is how to create algorithms that are capable of generating beautiful, meaningful images and audio. In this work, we introduce an artificial system based on a Deep Neural Network that creates artistic images of high perceptual quality."
+  },
+  {
+    "title": "Pointer Networks",
+    "url": "https://arxiv.org/abs/1506.03134",
+    "year": 2015,
+    "citation_count": 5000,
+    "venue": "NeurIPS 2015",
+    "authors": ["Oriol Vinyals", "Meire Fortunato", "Navdeep Jaitly"],
+    "abstract": "We introduce a new neural architecture to learn the conditional probability of an output sequence with elements that are discrete tokens corresponding to positions in an input sequence. We call this model Pointer Net, and show that it can be used to learn solutions to three challenging geometric problems."
+  },
+  {
+    "title": "XLNet: Generalized Autoregressive Pretraining for Language Understanding",
+    "url": "https://arxiv.org/abs/1906.08237",
+    "year": 2019,
+    "citation_count": 8000,
+    "venue": "NeurIPS 2019",
+    "authors": ["Zhilin Yang", "Zihang Dai", "Yiming Yang"],
+    "abstract": "With the capability of modeling bidirectional contexts, denoising autoencoding based pretraining like BERT achieves better performance than pretraining approaches based on autoregressive language modeling. However, BERT neglects the dependency between the masked positions and suffers from a pretrain-finetune discrepancy."
+  },
+  {
+    "title": "Recurrent Batch Normalization",
+    "url": "https://arxiv.org/abs/1603.09025",
+    "year": 2016,
+    "citation_count": 1500,
+    "venue": "ICLR 2017",
+    "authors": ["Tim Cooijmans", "Nicolas Ballas", "Cesar Laurent"],
+    "abstract": "We propose a reparameterization of LSTM that brings the benefits of batch normalization to recurrent neural networks. Whereas previous works only apply batch normalization to the input-to-hidden transformation of RNNs, we demonstrate that it is both possible and beneficial to apply it also to the hidden-to-hidden transformation."
+  },
+  {
+    "title": "Going Deeper with Convolutions (GoogLeNet/Inception)",
+    "url": "https://arxiv.org/abs/1409.4842",
+    "year": 2014,
+    "citation_count": 35000,
+    "venue": "CVPR 2015",
+    "authors": ["Christian Szegedy", "Wei Liu", "Yangqing Jia"],
+    "abstract": "We propose a deep convolutional neural network architecture codenamed Inception, which was responsible for setting the new state of the art for classification and detection in the ImageNet Large-Scale Visual Recognition Challenge 2014."
+  },
+  {
+    "title": "Densely Connected Convolutional Networks (DenseNet)",
+    "url": "https://arxiv.org/abs/1608.06993",
+    "year": 2016,
+    "citation_count": 25000,
+    "venue": "CVPR 2017",
+    "authors": ["Gao Huang", "Zhuang Liu", "Laurens van der Maaten"],
+    "abstract": "We propose to connect each layer to every other layer in a feed-forward fashion. Whereas traditional convolutional networks with L layers have L connections, our network has L(L+1)/2 direct connections. For each layer, the feature-maps of all preceding layers are used as inputs."
+  },
+  {
+    "title": "Learning Phrase Representations using RNN Encoder-Decoder for Statistical Machine Translation (GRU)",
+    "url": "https://arxiv.org/abs/1406.1078",
+    "year": 2014,
+    "citation_count": 20000,
+    "venue": "EMNLP 2014",
+    "authors": ["Kyunghyun Cho", "Bart van Merrienboer", "Caglar Gulcehre"],
+    "abstract": "In this paper, we propose a novel neural network model called RNN Encoder-Decoder that consists of two recurrent neural networks (RNN). One RNN encodes a sequence of symbols into a fixed-length vector representation, and the other decodes the representation into another sequence of symbols."
+  },
+  {
+    "title": "Convolutional Neural Networks for Sentence Classification",
+    "url": "https://arxiv.org/abs/1408.5882",
+    "year": 2014,
+    "citation_count": 15000,
+    "venue": "EMNLP 2014",
+    "authors": ["Yoon Kim"],
+    "abstract": "We report on a series of experiments with convolutional neural networks (CNN) trained on top of pre-trained word vectors for sentence-level classification tasks. With little hyperparameter tuning, we obtain state-of-the-art results on multiple benchmarks."
+  },
+  {
+    "title": "Deep Speech 2: End-to-End Speech Recognition in English and Mandarin",
+    "url": "https://arxiv.org/abs/1512.02595",
+    "year": 2015,
+    "citation_count": 4000,
+    "venue": "ICML 2016",
+    "authors": ["Dario Amodei", "Rishita Anubhai", "Eric Battenberg"],
+    "abstract": "We show that an end-to-end deep learning approach can be used to recognize either English or Mandarin Chinese speech–two vastly different languages–by learning the mapping between speech spectrograms and text sequences."
+  },
+  {
+    "title": "A Style-Based Generator Architecture for Generative Adversarial Networks (StyleGAN)",
+    "url": "https://arxiv.org/abs/1812.04948",
+    "year": 2018,
+    "citation_count": 8000,
+    "venue": "CVPR 2019",
+    "authors": ["Tero Karras", "Samuli Laine", "Timo Aila"],
+    "abstract": "We propose an alternative generator architecture for generative adversarial networks, borrowing from style transfer literature. The new architecture leads to an automatically learned, unsupervised separation of high-level attributes and stochastic variation in the generated images."
+  },
+  {
+    "title": "Language Models are Few-Shot Learners (GPT-3)",
+    "url": "https://arxiv.org/abs/2005.14165",
+    "year": 2020,
+    "citation_count": 25000,
+    "venue": "NeurIPS 2020",
+    "authors": ["Tom B. Brown", "Benjamin Mann", "Nick Ryder"],
+    "abstract": "We demonstrate that scaling language models greatly improves task-agnostic, few-shot performance. GPT-3, an autoregressive language model with 175 billion parameters, achieves strong performance on many NLP datasets and tasks designed to be challenging for current NLP systems."
+  },
+  {
+    "title": "PointNet: Deep Learning on Point Sets for 3D Classification and Segmentation",
+    "url": "https://arxiv.org/abs/1612.00593",
+    "year": 2016,
+    "citation_count": 10000,
+    "venue": "CVPR 2017",
+    "authors": ["Charles R. Qi", "Hao Su", "Kaichun Mo"],
+    "abstract": "Point cloud is an important type of geometric data structure. Due to its irregular format, most researchers transform such data to regular 3D voxel grids or collections of images. In this paper, we design a novel type of neural network that directly consumes point clouds."
+  },
+  {
+    "title": "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale (ViT)",
+    "url": "https://arxiv.org/abs/2010.11929",
+    "year": 2020,
+    "citation_count": 25000,
+    "venue": "ICLR 2021",
+    "authors": ["Alexey Dosovitskiy", "Lucas Beyer", "Alexander Kolesnikov"],
+    "abstract": "While the Transformer architecture has become the de-facto standard for natural language processing tasks, its applications to computer vision remain limited. In vision, attention is either applied in conjunction with convolutional networks, or used to replace certain components of convolutional networks while keeping their overall structure in place."
+  },
+  {
+    "title": "End-to-End Object Detection with Transformers (DETR)",
+    "url": "https://arxiv.org/abs/2005.12872",
+    "year": 2020,
+    "citation_count": 10000,
+    "venue": "ECCV 2020",
+    "authors": ["Nicolas Carion", "Francisco Massa", "Gabriel Synnaeve"],
+    "abstract": "We present a new method that views object detection as a direct set prediction problem. Our approach streamlines the detection pipeline, effectively removing the need for many hand-designed components like a non-maximum suppression procedure or anchor generation."
+  }
+]

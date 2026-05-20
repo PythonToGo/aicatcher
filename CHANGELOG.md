@@ -2,6 +2,88 @@
 
 ---
 
+## [Phase D] 신규 수집기 + 레지스트리 팩토리 — 2026-05-20
+
+### 개요
+
+3개 파이프라인 모드별 전용 수집기를 연결. `build_registry(mode)` 팩토리 하나로 올바른 수집기 세트가 자동 구성됨.
+
+---
+
+### 신규 파일
+
+#### `src/newsbot/collection/semantic_scholar.py`
+
+| 항목 | 내용 |
+|------|------|
+| 소스 | Semantic Scholar Public API + 큐레이션 시드 (`data/classic_papers_seed.json`) |
+| 전략 | seed-first: ISO 주차 기반 배치 로테이션(10편/주) → API 폴백 |
+| 레이트 리밋 | `asyncio.Semaphore(1)` (1 req/s, API 키 없음 기준) |
+| `content_type` | `"classic_paper"` 고정 |
+| 에러 처리 | seed 파싱 실패 / API 실패 모두 개별 skip, 파이프라인 중단 없음 |
+
+#### `data/classic_papers_seed.json`
+
+53편 큐레이션 목록. 분야 커버리지:
+
+| 분야 | 대표 논문 |
+|------|---------|
+| Transformers / NLP | Attention is All You Need, BERT, GPT/GPT-2/GPT-3, T5, ELMo, XLNet |
+| Computer Vision | AlexNet, VGGNet, ResNet, GoogLeNet, DenseNet, ViT, EfficientNet |
+| Object Detection | YOLO, Faster R-CNN, FPN, Mask R-CNN, DETR |
+| Generative | GAN, DCGAN, VAE, StyleGAN, DDPM |
+| RL | DQN, A3C, PPO, AlphaGo |
+| Optimization | Adam, BatchNorm, Dropout, LayerNorm |
+| Self-supervised | MoCo, SimCLR, CLIP |
+| Graph | GCN, GAT |
+| Sequence | LSTM, GRU, Seq2Seq, Bahdanau Attention |
+| Audio / 3D / etc | WaveNet, PointNet, U-Net |
+
+---
+
+### 변경 파일
+
+#### `src/newsbot/collection/registry.py`
+- `build_registry(pipeline_mode, **kwargs)` 팩토리 추가
+  - `"news"` → `HackerNewsCollector()`
+  - `"new_paper"` → `ArxivCollector(max_results=50, hours_back=168)` (7일치 수집)
+  - `"classic_paper"` → `SemanticScholarCollector(limit=10, api_key=...)`
+- `build_default_registry()` 유지 (하위호환 alias)
+
+#### `src/newsbot/collection/arxiv.py`
+- `RawItem.content_type = "new_paper"` 명시
+
+#### `src/newsbot/collection/hackernews.py`
+- `RawItem.content_type = "news"` 명시
+
+#### `src/newsbot/config.py`
+- `semantic_scholar_api_key` 옵션 추가 (없으면 public 레이트 리밋 적용)
+
+#### `scripts/run_pipeline.py`
+- `build_default_registry()` → `build_registry(settings.pipeline_mode, api_key=...)` 교체
+
+---
+
+### 검증 결과
+
+```
+seed 로딩 (53편)              OK — 전체 파싱 성공
+seed 배치 로테이션             OK — week 기반 10편 배치
+registry 팩토리 (3 모드)      OK — news/new_paper/classic_paper 각 정확한 수집기 선택
+build_default_registry        OK — 하위호환 alias 동작
+E2E classic_paper             OK — semantic_scholar 10편 수집 → dedup → top 1 분석
+E2E new_paper                 OK — arxiv 50편 수집 → top 5 분석
+E2E news                      OK — hackernews 30편 수집 → top 6 분석
+```
+
+---
+
+### 다음 단계
+
+**Phase E** — 포맷터 + 엔트리포인트 스크립트 + GitHub Actions 워크플로
+
+---
+
 ## [Phase B] Scorer / Analyzer / Synthesizer 모드-aware화 + 프롬프트 캐싱 — 2026-05-20
 
 ### 개요

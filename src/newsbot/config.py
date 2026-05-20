@@ -20,6 +20,10 @@ class Settings(BaseSettings):
 
     # optional keys
     tavily_api_key: str = Field(default="", description="Tavily web search helper")
+    semantic_scholar_api_key: str = Field(
+        default="",
+        description="Semantic Scholar API key — optional, increases rate limit to 10 req/s",
+    )
 
     # X (Twitter)
     twitter_bearer_token: str = Field(default="")

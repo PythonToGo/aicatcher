@@ -128,6 +128,7 @@ class ArxivCollector(BaseCollector):
                 source=self.source_name,
                 published_at=published_at,
                 raw_score=0.0,  # arXiv has no native score
+                content_type="new_paper",
                 metadata={
                     "categories": categories,
                     "authors": authors,

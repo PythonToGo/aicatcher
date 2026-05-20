@@ -138,6 +138,7 @@ class HackerNewsCollector(BaseCollector):
             source=self.source_name,
             published_at=published_at,
             raw_score=float(score),
+            content_type="news",
             metadata={
                 "hn_id": data.get("id"),
                 "comments": data.get("descendants", 0),

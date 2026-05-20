@@ -19,7 +19,7 @@ from pathlib import Path
 # Add the project root to sys.path when running the script directly.
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from newsbot.collection.registry import build_default_registry
+from newsbot.collection.registry import build_registry
 from newsbot.config import get_settings
 from newsbot.dedup.store import DeduplicationStore
 from newsbot.distribution.email_pub import EmailPublisher
@@ -64,7 +64,10 @@ async def run_pipeline() -> Report:
         raise RuntimeError("ANTHROPIC_API_KEY가 설정되지 않았습니다. mock 모드는 MOCK_CLAUDE=true 로 실행하세요.")
 
     # ── 1. Collection ─────────────────────────────────────────
-    registry = build_default_registry()
+    registry = build_registry(
+        settings.pipeline_mode,
+        api_key=settings.semantic_scholar_api_key,
+    )
     raw_items = await registry.collect_all()
     logger.info("collected %d raw items", len(raw_items))
 
