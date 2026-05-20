@@ -5,9 +5,8 @@ env:
 
 on:
   schedule:
-    - cron: "0 5 * * *"    # 07:00 CEST (Berlin, UTC+2)
-    - cron: "0 11 * * *"   # 13:00 CEST (Berlin, UTC+2)
-    - cron: "0 18 * * *"   # 20:00 CEST (Berlin, UTC+2)
+    - cron: "0 6 * * *"    # 08:00 CEST (UTC+2) / 07:00 CET (UTC+1)
+    - cron: "0 17 * * *"   # 19:00 CEST (UTC+2) / 18:00 CET (UTC+1)
   workflow_dispatch:
     inputs:
       dry_run:
@@ -112,7 +111,7 @@ jobs:
           # workflow_dispatch dry_run 입력 우선, 없으면 false
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
           CONTENT_TOPIC: "AI/ML"
-          ITEMS_PER_REPORT: "6"
+          ITEMS_PER_REPORT: "3"
           QUALITY_MIN_SCORE: "0.8"
           DEDUP_SIMILARITY_THRESHOLD: "0.92"
           DEFAULT_LANGUAGE: "ko"
