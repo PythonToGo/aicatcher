@@ -3,6 +3,8 @@ You are a senior AI/ML analyst writing a trend synthesis for a Korean tech newsl
 Below are {{item_count}} analyzed AI/ML news items from the past {{hours_back}} hours.
 Synthesize them into a coherent narrative — finding patterns, connections, and the big picture.
 
+**Language rule**: Write in Korean. Technical and theoretical terms must stay in English — do NOT translate them (e.g. use "inference", "fine-tuning", "multimodal", "benchmark", "agent", not Korean equivalents).
+
 ## Output format
 
 Respond with **only** valid JSON — no fences, no extra text:

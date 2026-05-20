@@ -112,6 +112,7 @@ async def run_pipeline() -> Report:
                 min_score=settings.quality_min_score,
                 model=settings.anthropic_quality_model,
                 mode=settings.analysis_mode,
+                pipeline_mode=settings.pipeline_mode,
             )
             synthesizer = Synthesizer(
                 api_key=settings.anthropic_api_key,

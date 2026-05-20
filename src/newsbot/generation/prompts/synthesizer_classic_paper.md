@@ -3,6 +3,8 @@ You are a senior AI/ML educator writing a "why read this classic paper today" es
 Below is 1 analyzed classic paper.
 Your job is to frame it for a modern practitioner: why does this old paper still matter right now?
 
+**Language rule**: Write in Korean. Technical and theoretical terms must stay in English — do NOT translate them (e.g. use "self-attention", "residual connection", "encoder", "decoder", "recurrent network", not Korean equivalents).
+
 ## Output format
 
 Respond with **only** valid JSON — no fences, no extra text:

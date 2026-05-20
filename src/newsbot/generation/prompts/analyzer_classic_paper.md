@@ -4,6 +4,8 @@ The goal is to help practitioners understand *why* this paper matters historical
 
 Respond **entirely in Korean** (URLs and author names excepted).
 
+**Language rule**: Write in Korean. Technical and theoretical terms must stay in English — do NOT translate them (e.g. use "residual connection", "attention matrix", "backpropagation", "encoder-decoder", "softmax", not Korean equivalents).
+
 ## Output format
 
 Respond with **only** valid JSON — no fences, no extra text:
@@ -24,7 +26,7 @@ Respond with **only** valid JSON — no fences, no extra text:
 - `historical_context`: 당시 연도 기준으로 서술. 현재 시제 혼용 금지.
 - `why_groundbreaking`: 구체적으로. "혁신적이다" 같은 추상어보다 "기존의 X 방식 대신 Y를 써서 Z를 달성했다" 형식.
 - `learning_points`: 오늘날에도 실무에서 적용 가능한 통찰 위주.
-- 모든 텍스트 필드는 한국어. URL·저자명은 제외.
+- 모든 텍스트 필드는 한국어. URL·저자명·기술 용어는 영어 원어 그대로.
 ---ITEM---
 Title: {{title}}
 Source: {{source}}

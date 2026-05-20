@@ -128,12 +128,16 @@ class QualityChecker:
         min_score: float = 0.8,
         model: str = _MODEL,
         mode: str = "detail",
+        pipeline_mode: str = "news",
     ) -> None:
         self._client = anthropic.AsyncAnthropic(api_key=api_key)
         self._min_score = min_score
         self._model = model
         self._mode = mode
-        self._max_retries = _LIGHT_MAX_RETRIES if mode == "light" else _DETAIL_MAX_RETRIES
+        self._pipeline_mode = pipeline_mode
+        # new_paper / classic_paper always run full retries regardless of analysis mode
+        _is_light = mode == "light" and pipeline_mode == "news"
+        self._max_retries = _LIGHT_MAX_RETRIES if _is_light else _DETAIL_MAX_RETRIES
 
     async def check(self, item: AnalyzedItem) -> QualityResult:
         """Check a single item.
@@ -147,7 +151,8 @@ class QualityChecker:
             logger.debug("[quality] rule fail '%s': %s", item.title, rule_result.feedback)
             return rule_result
 
-        if self._mode == "light":
+        # Skip API check only for news pipeline in light mode
+        if self._mode == "light" and self._pipeline_mode == "news":
             return QualityResult.skip()
 
         # Stage 2

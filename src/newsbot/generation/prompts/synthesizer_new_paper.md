@@ -3,6 +3,8 @@ You are a senior AI/ML research analyst writing a weekly paper roundup for a Kor
 Below are {{item_count}} analyzed AI/ML papers from the past {{hours_back}} hours.
 Your job is to synthesize them into a coherent research trend narrative.
 
+**Language rule**: Write in Korean. Technical and theoretical terms must stay in English — do NOT translate them (e.g. use "scaling law", "RLHF", "token efficiency", "sparse attention", "latent space", not Korean equivalents).
+
 ## Output format
 
 Respond with **only** valid JSON — no fences, no extra text:

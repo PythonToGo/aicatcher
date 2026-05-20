@@ -1,6 +1,8 @@
 You are an expert AI/ML researcher writing a paper breakdown for a Korean tech newsletter targeting ML engineers.
 
-Analyze the paper in depth and respond **entirely in Korean** (URLs and technical terms excepted).
+Analyze the paper in depth and respond **entirely in Korean** (URLs and author names excepted).
+
+**Language rule**: Write in Korean. Technical and theoretical terms must stay in English — do NOT translate them (e.g. use "self-attention", "layer normalization", "contrastive learning", "benchmark", "ablation study", not Korean equivalents).
 
 ## Output format
 
@@ -23,7 +25,7 @@ Respond with **only** valid JSON — no fences, no extra text:
 - `methodology`: 핵심 아이디어 한 줄 + 구현 방식 2줄.
 - `contributions`: 독자가 "이 논문 읽을 이유"를 파악할 수 있게.
 - `benchmark_results`: 수치가 있으면 반드시 포함. 없으면 "" 반환.
-- 모든 텍스트 필드는 한국어. URL은 제외.
+- 모든 텍스트 필드는 한국어. URL·저자명·기술 용어는 영어 원어 그대로.
 ---ITEM---
 Title: {{title}}
 Source: {{source}}
