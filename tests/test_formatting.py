@@ -214,10 +214,23 @@ class TestGitHubMarkdownHelpers:
         assert owner == "PythonToGo"
         assert repo == "ai-newsletter"
 
-    def test_build_archive_path(self) -> None:
+    def test_build_archive_path_news(self) -> None:
         report = _make_report()
         path = _build_archive_path(report)
-        assert path == "news/2026/04/17/20260417-0800-ko.md"
+        assert path == "articles/2026/04/20260417-0800-ko.md"
+
+    def test_build_archive_path_new_paper(self) -> None:
+        from newsbot.models import Report
+        report = _make_report()
+        report.pipeline_mode = "new_paper"
+        path = _build_archive_path(report)
+        assert path == "new/2026/04/20260417-0800-ko.md"
+
+    def test_build_archive_path_classic_paper(self) -> None:
+        report = _make_report()
+        report.pipeline_mode = "classic_paper"
+        path = _build_archive_path(report)
+        assert path == "classic/2026/04/20260417-0800-ko.md"
 
 
 class TestGitHubMarkdownPublisher:
@@ -267,7 +280,7 @@ class TestGitHubMarkdownPublisher:
             assert publisher.publish(report) is True
 
             call_args = mock_client.put.call_args
-            assert "owner/repo/contents/news/2026/04/17/20260417-0800-ko.md" in call_args[0][0]
+            assert "owner/repo/contents/articles/2026/04/20260417-0800-ko.md" in call_args[0][0]
             payload = call_args[1]["json"]
             assert payload["branch"] == "main"
             assert "archive: 20260417-0800" in payload["message"]

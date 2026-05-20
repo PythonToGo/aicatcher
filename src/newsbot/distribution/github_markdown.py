@@ -30,9 +30,17 @@ def _parse_repo(repo_url: str) -> tuple[str, str]:
     raise ValueError(f"unsupported GitHub repo URL: {repo_url}")
 
 
+_FOLDER_MAP: dict[str, str] = {
+    "news": "articles",
+    "new_paper": "new",
+    "classic_paper": "classic",
+}
+
+
 def _build_archive_path(report: Report) -> str:
-    date_part = f"{report.report_id[:4]}/{report.report_id[4:6]}/{report.report_id[6:8]}"
-    return f"news/{date_part}/{report.report_id}-{report.language}.md"
+    folder = _FOLDER_MAP.get(report.pipeline_mode, "articles")
+    year_month = f"{report.report_id[:4]}/{report.report_id[4:6]}"
+    return f"{folder}/{year_month}/{report.report_id}-{report.language}.md"
 
 
 class GitHubMarkdownPublisher(BasePublisher):
