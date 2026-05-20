@@ -1,0 +1,96 @@
+name: Publish Weekly New Papers
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+on:
+  schedule:
+    - cron: "0 9 * * 2"   # 화요일 09:00 UTC (18:00 KST)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "DRY_RUN 모드 (실제 게시 없음)"
+        type: boolean
+        default: false
+      analysis_mode:
+        description: "분석 모드"
+        type: choice
+        options: [detail, light]
+        default: detail
+      main_model:
+        description: "메인 모델"
+        type: choice
+        options:
+          - claude-sonnet-4-6
+          - claude-haiku-4-5-20251001
+          - claude-opus-4-1
+        default: claude-sonnet-4-6
+
+concurrency:
+  group: publish-new-papers
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          enable-cache: false
+
+      - run: uv sync --frozen
+
+      - name: Cache HuggingFace models
+        uses: actions/cache@v4
+        continue-on-error: true
+        with:
+          path: ~/.cache/huggingface
+          key: hf-models-all-MiniLM-L6-v2
+          restore-keys: hf-models-
+
+      - name: Restore newsbot DB
+        uses: actions/cache@v4
+        continue-on-error: true
+        with:
+          path: data/newsbot.db
+          key: newsbot-db-new-papers-${{ github.run_id }}
+          restore-keys: newsbot-db-new-papers-
+
+      - run: mkdir -p data
+
+      - name: Run new-papers pipeline
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARCHIVE_GITHUB_TOKEN: ${{ secrets.ARCHIVE_GITHUB_TOKEN }}
+          GITHUB_ARCHIVE_REPO_URL: "git@github.com:PythonToGo/ai-newsletter.git"
+          GITHUB_ARCHIVE_BRANCH: "main"
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          EMAIL_RECIPIENTS: ${{ secrets.EMAIL_RECIPIENTS }}
+          TWITTER_BEARER_TOKEN: ${{ secrets.TWITTER_BEARER_TOKEN }}
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_SECRET }}
+          PIPELINE_MODE: "new_paper"
+          ANALYSIS_MODE: ${{ github.event.inputs.analysis_mode || 'detail' }}
+          ANTHROPIC_MAIN_MODEL: ${{ github.event.inputs.main_model || 'claude-sonnet-4-6' }}
+          ANTHROPIC_QUALITY_MODEL: "claude-haiku-4-5-20251001"
+          ITEMS_PER_NEW_PAPER: "5"
+          CONTENT_TOPIC: "AI/ML"
+          QUALITY_MIN_SCORE: "0.8"
+          DEDUP_SIMILARITY_THRESHOLD: "0.92"
+          DEFAULT_LANGUAGE: "ko"
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          LOG_LEVEL: "INFO"
+        run: uv run python scripts/run_new_papers.py

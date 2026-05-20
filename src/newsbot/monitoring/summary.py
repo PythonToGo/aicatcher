@@ -112,6 +112,16 @@ def save_report(report: Report, tweets: list[str] | None = None) -> Path:
 
 
 def build_report_md(report: Report) -> str:
+    """Route to the appropriate markdown renderer based on pipeline_mode."""
+    if report.pipeline_mode == "classic_paper":
+        from newsbot.formatting.classic_paper import format_classic_paper_md
+        return format_classic_paper_md(report)
+    if report.pipeline_mode == "new_paper":
+        return _build_new_paper_md(report)
+    return _build_news_md(report)
+
+
+def _build_news_md(report: Report) -> str:
     lines = [
         f"# {report.headline}",
         f"",
@@ -128,7 +138,6 @@ def build_report_md(report: Report) -> str:
         f"## 아이템 분석",
         f"",
     ]
-
     for i, item in enumerate(report.items, 1):
         lines += [
             f"### {i}. {item.title}",
@@ -137,33 +146,65 @@ def build_report_md(report: Report) -> str:
             f"- **점수**: {item.score}",
             f"- **URL**: {item.url}",
             f"",
-            f"**요약**",
-            f"",
-            item.summary_ko,
-            f"",
-            f"**맥락**",
-            f"",
-            item.context,
-            f"",
-            f"**실무 시사점**",
-            f"",
-            item.implications,
-            f"",
-            f"**한계 및 의문**",
-            f"",
-            item.limitations,
-            f"",
+            f"**요약**", f"", item.summary_ko, f"",
+            f"**맥락**", f"", item.context, f"",
+            f"**실무 시사점**", f"", item.implications, f"",
+            f"**한계 및 의문**", f"", item.limitations, f"",
         ]
         if item.related_urls:
-            lines.append("**관련 링크**")
+            lines += ["**관련 링크**", ""]
+            lines += [f"- {u}" for u in item.related_urls]
             lines.append("")
-            for url in item.related_urls:
-                lines.append(f"- {url}")
+        lines += ["---", ""]
+    return "\n".join(lines)
+
+
+def _build_new_paper_md(report: Report) -> str:
+    lines = [
+        f"# 📄 {report.headline}",
+        f"",
+        f"> **리포트 ID**: `{report.report_id}`  ",
+        f"> **생성**: {report.generated_at.strftime('%Y-%m-%d %H:%M UTC')}  ",
+        f"> **논문 수**: {len(report.items)}편  ",
+        f"",
+        f"## 이번 주 연구 동향",
+        f"",
+        report.trend_analysis,
+        f"",
+        f"---",
+        f"",
+        f"## 논문 분석",
+        f"",
+    ]
+    for i, item in enumerate(report.items, 1):
+        methodology = item.extra.get("methodology", "")
+        contributions = item.extra.get("contributions", "")
+        benchmarks = item.extra.get("benchmark_results", "")
+        lines += [
+            f"### {i}. {item.title}",
+            f"",
+            f"- **출처**: {item.scored.raw.source}",
+            f"- **점수**: {item.score}",
+            f"- **URL**: {item.url}",
+            f"",
+            f"**요약**", f"", item.summary_ko, f"",
+        ]
+        if methodology:
+            lines += [f"**방법론**", f"", methodology, f""]
+        if contributions:
+            lines += [f"**주요 기여**", f"", contributions, f""]
+        if benchmarks:
+            lines += [f"**실험 결과**", f"", benchmarks, f""]
+        lines += [
+            f"**맥락**", f"", item.context, f"",
+            f"**실무 시사점**", f"", item.implications, f"",
+            f"**한계**", f"", item.limitations, f"",
+        ]
+        if item.related_urls:
+            lines += ["**관련 링크**", ""]
+            lines += [f"- {u}" for u in item.related_urls]
             lines.append("")
-
-        lines.append("---")
-        lines.append("")
-
+        lines += ["---", ""]
     return "\n".join(lines)
 
 

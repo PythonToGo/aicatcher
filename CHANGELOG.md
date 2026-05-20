@@ -2,6 +2,99 @@
 
 ---
 
+## [Phase E] 포맷터 + 엔트리포인트 + 워크플로 — 2026-05-20
+
+### 개요
+
+3개 파이프라인 모드에 맞는 포맷터를 구현하고, 모드별 실행 스크립트와 GitHub Actions 워크플로를 추가.
+
+---
+
+### 신규 파일
+
+#### `src/newsbot/formatting/classic_paper.py`
+
+| 함수 | 출력 | 용도 |
+|------|------|------|
+| `format_classic_paper_md(report)` | Markdown | GitHub 아카이브, 로컬 저장 |
+| `format_classic_paper_html(report)` | HTML | 이메일 본문 |
+
+구조: 📚 클래식 논문 리뷰 헤더 → "왜 지금 이 논문인가" → 역사적 배경 → 왜 혁신적이었나 → 오늘날 배울 것 → 한계. `extra` 필드 없으면 해당 섹션 자동 생략.
+
+#### `scripts/run_new_papers.py`
+
+`PIPELINE_MODE=new_paper`, `ANALYSIS_MODE=detail` 설정 후 `run_pipeline.main()` 위임. 별도 로직 없음.
+
+#### `scripts/run_classic_paper.py`
+
+`PIPELINE_MODE=classic_paper`, `ANALYSIS_MODE=detail`, `ITEMS_PER_REPORT=1` 설정 후 위임.
+
+#### `.github/workflows/publish_new_papers.yml`
+
+- 트리거: 화요일 09:00 UTC + `workflow_dispatch`
+- `PIPELINE_MODE=new_paper`, `ITEMS_PER_NEW_PAPER=5`, `ANALYSIS_MODE=detail`
+- 전용 DB 캐시 키 (`newsbot-db-new-papers-*`)
+
+#### `.github/workflows/publish_classic_paper.yml`
+
+- 트리거: 목요일 09:00 UTC + `workflow_dispatch`
+- `PIPELINE_MODE=classic_paper`, `ITEMS_PER_CLASSIC=1`, `QUALITY_MIN_SCORE=0.75` (단일 논문이므로 완화)
+- `SEMANTIC_SCHOLAR_API_KEY` 시크릿 연결
+- 전용 DB 캐시 키 (`newsbot-db-classic-*`)
+
+---
+
+### 변경 파일
+
+#### `src/newsbot/formatting/twitter.py`
+
+`TwitterFormatter.format()` → `report.pipeline_mode` 기반 분기:
+- `classic_paper`: 3-트윗 고정 (요약 / 왜 혁신적 / 배울 점 + URL)
+- `new_paper`: 5-트윗 (연구 동향 헤드라인 + 논문별 methodology + 마무리)
+- `news`: 기존 포맷 유지
+
+#### `src/newsbot/formatting/email.py`
+
+`format_email_html()` → 모드 분기:
+- `classic_paper` → `format_classic_paper_html()` (녹색 헤더, 클래식 섹션)
+- `new_paper` → `_format_new_paper_html()` (파란 헤더, methodology/contributions/benchmarks 섹션)
+- `news` → `_format_news_html()` (기존 포맷)
+- 공통 `_wrap_html()` 헬퍼로 HTML 골격 통합
+
+#### `src/newsbot/monitoring/summary.py`
+
+`build_report_md()` → 모드 분기:
+- `classic_paper` → `format_classic_paper_md()`
+- `new_paper` → `_build_new_paper_md()` (방법론/기여/벤치마크 섹션 포함)
+- `news` → `_build_news_md()` (기존 포맷)
+
+---
+
+### 검증 결과
+
+```
+포맷터 유닛 테스트 (6개 케이스)       OK
+  - classic twitter 3 tweets          OK — 📚 헤더, why_groundbreaking, URL
+  - classic markdown                  OK — extra 필드 없으면 섹션 자동 생략
+  - classic email HTML                OK — 녹색(#065f46) 헤더
+  - build_report_md 라우팅            OK
+  - new_paper twitter 5 tweets        OK — 📄 헤더, methodology, #AIResearch
+  - news twitter 6 tweets             OK — 기존 포맷 유지
+
+E2E scripts/run_new_papers.py         OK — PIPELINE_MODE=new_paper, top 5
+E2E scripts/run_classic_paper.py      OK — PIPELINE_MODE=classic_paper, top 1
+```
+
+---
+
+### 다음 단계
+
+**Phase F** — 테스트
+- `tests/test_multi_channel.py`: 모드별 통합 테스트
+- 각 모드 `MOCK_CLAUDE=true` E2E 검증 자동화
+
+---
+
 ## [Phase D] 신규 수집기 + 레지스트리 팩토리 — 2026-05-20
 
 ### 개요
