@@ -50,7 +50,8 @@ async def run_pipeline() -> Report:
     logger = logging.getLogger(__name__)
 
     logger.info(
-        "=== newsbot pipeline start | DRY_RUN=%s MOCK_CLAUDE=%s ANALYSIS_MODE=%s MAIN_MODEL=%s QUALITY_MODEL=%s ===",
+        "=== newsbot pipeline start | PIPELINE_MODE=%s DRY_RUN=%s MOCK_CLAUDE=%s ANALYSIS_MODE=%s MAIN_MODEL=%s QUALITY_MODEL=%s ===",
+        settings.pipeline_mode,
         settings.dry_run,
         settings.mock_claude,
         settings.analysis_mode,
@@ -95,11 +96,13 @@ async def run_pipeline() -> Report:
             scorer = Scorer(
                 api_key=settings.anthropic_api_key,
                 model=settings.anthropic_main_model,
+                pipeline_mode=settings.pipeline_mode,
             )
             analyzer = Analyzer(
                 api_key=settings.anthropic_api_key,
                 model=settings.anthropic_main_model,
                 mode=settings.analysis_mode,
+                pipeline_mode=settings.pipeline_mode,
             )
             checker = QualityChecker(
                 api_key=settings.anthropic_api_key,
@@ -111,6 +114,7 @@ async def run_pipeline() -> Report:
                 api_key=settings.anthropic_api_key,
                 model=settings.anthropic_main_model,
                 mode=settings.analysis_mode,
+                pipeline_mode=settings.pipeline_mode,
             )
 
         scored = await scorer.score_all(new_items)
@@ -118,8 +122,8 @@ async def run_pipeline() -> Report:
         # Feedback weighting (Phase 1: no-op)
         weighted = FeedbackWeighter().apply(scored)
 
-        # Keep only the top N items.
-        top_scored = weighted[: settings.items_per_report]
+        # Keep only the top N items (respects pipeline_mode via effective_items_per_report).
+        top_scored = weighted[: settings.effective_items_per_report]
         logger.info("selected top %d items for analysis", len(top_scored))
 
         # ── 4. Fetch full articles ────────────────────────────

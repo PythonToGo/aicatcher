@@ -16,6 +16,7 @@ import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol, runtime_checkable
 
 import anthropic
 
@@ -237,8 +238,8 @@ class QualityChecker:
 
 # ── Analyzer protocol for retries ────────────────────────────────────────────
 
-class AnalyzerProtocol:
-    """Analyzer interface used by QualityChecker for retries."""
+class AnalyzerProtocol(Protocol):
+    """Structural protocol: any object with analyze_one satisfies this."""
 
     async def analyze_one(self, item: ScoredItem) -> AnalyzedItem:
-        raise NotImplementedError
+        ...

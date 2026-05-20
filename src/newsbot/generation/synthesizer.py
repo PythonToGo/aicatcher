@@ -1,7 +1,11 @@
 """Synthesizer — Combine analyzed items into a Report headline and trend_analysis.
 
-Prompt: src/newsbot/generation/prompts/synthesizer.md
+Prompts: src/newsbot/generation/prompts/synthesizer_{news,new_paper,classic_paper}.md
 Response format: JSON (headline, trend_analysis)
+
+Token optimisation:
+  - Prompt split on ---ITEMS--- → static block cached with cache_control=ephemeral.
+    The items_json block is dynamic and not cached (changes every run).
 """
 
 from __future__ import annotations
@@ -18,12 +22,20 @@ from newsbot.models import AnalyzedItem, Report
 
 logger = logging.getLogger(__name__)
 
-_PROMPT_PATH = Path(__file__).parent / "prompts" / "synthesizer.md"
+_PROMPT_DIR = Path(__file__).parent / "prompts"
+
+_PROMPT_MAP: dict[str, str] = {
+    "news": "synthesizer_news.md",
+    "new_paper": "synthesizer_new_paper.md",
+    "classic_paper": "synthesizer_classic_paper.md",
+}
+
 _MODEL = "claude-sonnet-4-6"
 _TEMPERATURE = 0.7
 _DEFAULT_HOURS_BACK = 24
 _DETAIL_MAX_TOKENS = 2048
 _LIGHT_MAX_TOKENS = 1400
+_CLASSIC_MAX_TOKENS = 800
 _MAX_PARSE_RETRIES = 1
 _RETRY_SUFFIX = (
     "\n\nIMPORTANT: Your previous response was not valid complete JSON. "
@@ -32,16 +44,50 @@ _RETRY_SUFFIX = (
 )
 
 
-def _load_prompt() -> str:
-    return _PROMPT_PATH.read_text(encoding="utf-8")
+def _load_prompt(pipeline_mode: str) -> tuple[str, str]:
+    """Return (static_part, items_template) split on ---ITEMS---."""
+    filename = _PROMPT_MAP.get(pipeline_mode, _PROMPT_MAP["news"])
+    text = (_PROMPT_DIR / filename).read_text(encoding="utf-8")
+    if "---ITEMS---" not in text:
+        return text, ""
+    static, dynamic = text.split("---ITEMS---", 1)
+    return static.strip(), dynamic.strip()
 
 
 def _truncate(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
-def _items_to_json(items: list[AnalyzedItem], mode: str = "detail") -> str:
-    """Serialize analyzed items into prompt-ready JSON."""
+def _items_to_json(items: list[AnalyzedItem], pipeline_mode: str, mode: str) -> str:
+    if pipeline_mode == "classic_paper":
+        payload = [
+            {
+                "title": item.title,
+                "score": item.score,
+                "summary_ko": item.summary_ko,
+                "context": item.context,
+                "implications": item.implications,
+                **item.extra,
+            }
+            for item in items
+        ]
+        return json.dumps(payload, ensure_ascii=False, indent=2)
+
+    if pipeline_mode == "new_paper":
+        payload = [
+            {
+                "title": item.title,
+                "url": item.url,
+                "score": item.score,
+                "summary_ko": _truncate(item.summary_ko, 200),
+                "implications": _truncate(item.implications, 180),
+                **{k: _truncate(str(v), 200) for k, v in item.extra.items()},
+            }
+            for item in items
+        ]
+        return json.dumps(payload, ensure_ascii=False, indent=2)
+
+    # news mode
     if mode == "light":
         payload = [
             {
@@ -69,14 +115,36 @@ def _items_to_json(items: list[AnalyzedItem], mode: str = "detail") -> str:
     return json.dumps(payload, ensure_ascii=False, indent=2)
 
 
-def _build_prompt(items: list[AnalyzedItem], hours_back: int, mode: str = "detail") -> str:
-    template = _load_prompt()
-    return (
-        template
-        .replace("{{item_count}}", str(len(items)))
+def _build_content(
+    static: str,
+    items_template: str,
+    items: list[AnalyzedItem],
+    item_count: int,
+    hours_back: int,
+    pipeline_mode: str,
+    mode: str,
+) -> list[dict]:
+    items_json = _items_to_json(items, pipeline_mode, mode)
+    dynamic = (
+        items_template
+        .replace("{{item_count}}", str(item_count))
         .replace("{{hours_back}}", str(hours_back))
-        .replace("{{items_json}}", _items_to_json(items, mode))
+        + "\n" + items_json
+        if items_template
+        else items_json
     )
+    if not static:
+        return [{"type": "text", "text": dynamic}]
+    return [
+        {
+            "type": "text",
+            "text": static
+                .replace("{{item_count}}", str(item_count))
+                .replace("{{hours_back}}", str(hours_back)),
+            "cache_control": {"type": "ephemeral"},
+        },
+        {"type": "text", "text": dynamic},
+    ]
 
 
 def _parse_response(text: str) -> dict:
@@ -95,6 +163,12 @@ def _make_report_id() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")
 
 
+def _max_tokens_for(pipeline_mode: str, mode: str) -> int:
+    if pipeline_mode == "classic_paper":
+        return _CLASSIC_MAX_TOKENS
+    return _LIGHT_MAX_TOKENS if mode == "light" else _DETAIL_MAX_TOKENS
+
+
 class Synthesizer:
     """Generate a Report by synthesizing all analyzed items."""
 
@@ -104,12 +178,15 @@ class Synthesizer:
         model: str = _MODEL,
         hours_back: int = _DEFAULT_HOURS_BACK,
         mode: str = "detail",
+        pipeline_mode: str = "news",
     ) -> None:
         self._client = anthropic.AsyncAnthropic(api_key=api_key)
         self._model = model
         self._hours_back = hours_back
         self._mode = mode
-        self._max_tokens = _LIGHT_MAX_TOKENS if mode == "light" else _DETAIL_MAX_TOKENS
+        self._pipeline_mode = pipeline_mode
+        self._max_tokens = _max_tokens_for(pipeline_mode, mode)
+        self._static, self._items_tpl = _load_prompt(pipeline_mode)
 
     async def synthesize(
         self,
@@ -117,32 +194,43 @@ class Synthesizer:
         report_id: str | None = None,
         language: str = "ko",
     ) -> Report:
-        """Return a Report synthesized from analyzed items."""
         if not items:
             raise ValueError("cannot synthesize an empty item list")
 
-        prompt = _build_prompt(items, self._hours_back, self._mode)
-        data = await self._request_valid_synthesis(prompt)
+        content = _build_content(
+            self._static,
+            self._items_tpl,
+            items,
+            len(items),
+            self._hours_back,
+            self._pipeline_mode,
+            self._mode,
+        )
+        data = await self._request_valid_synthesis(content)
 
         rid = report_id or _make_report_id()
-        logger.info("[synthesizer] created report %s with %d items", rid, len(items))
+        logger.info(
+            "[synthesizer] created report %s with %d items (pipeline=%s)",
+            rid, len(items), self._pipeline_mode,
+        )
         return Report(
             report_id=rid,
             items=items,
             headline=str(data["headline"]),
             trend_analysis=str(data["trend_analysis"]),
             language=language,
+            pipeline_mode=self._pipeline_mode,
         )
 
-    async def _request_valid_synthesis(self, prompt: str) -> dict:
-        current_prompt = prompt
+    async def _request_valid_synthesis(self, content: list[dict]) -> dict:
+        current_content = content
         for attempt in range(_MAX_PARSE_RETRIES + 1):
             try:
                 message = await self._client.messages.create(
                     model=self._model,
                     max_tokens=self._max_tokens,
                     temperature=_TEMPERATURE,
-                    messages=[{"role": "user", "content": current_prompt}],
+                    messages=[{"role": "user", "content": current_content}],
                 )
             except anthropic.APIError as exc:
                 logger.warning("[synthesizer] API error: %s", exc)
@@ -156,11 +244,14 @@ class Synthesizer:
             except (json.JSONDecodeError, ValueError) as exc:
                 logger.warning(
                     "[synthesizer] invalid response (attempt %d/%d): %s | raw: %s",
-                    attempt + 1,
-                    _MAX_PARSE_RETRIES + 1,
-                    exc,
-                    raw_text[:200],
+                    attempt + 1, _MAX_PARSE_RETRIES + 1, exc, raw_text[:200],
                 )
                 if attempt >= _MAX_PARSE_RETRIES:
                     raise ValueError(f"invalid synthesizer response: {exc}") from exc
-                current_prompt = prompt + _RETRY_SUFFIX
+                retry_content = list(current_content)
+                retry_content[-1] = {
+                    "type": "text",
+                    "text": retry_content[-1]["text"] + _RETRY_SUFFIX,
+                }
+                current_content = retry_content
+        raise ValueError("synthesizer: exceeded max retries without valid response")

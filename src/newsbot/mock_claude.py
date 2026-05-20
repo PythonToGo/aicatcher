@@ -118,6 +118,7 @@ class MockSynthesizer:
         items: list[AnalyzedItem],
         report_id: str | None = None,
         language: str = "ko",
+        pipeline_mode: str = "news",
     ) -> Report:
         if not items:
             raise ValueError("cannot synthesize an empty item list")
@@ -145,6 +146,7 @@ class MockSynthesizer:
             headline=headline,
             trend_analysis=trend_analysis,
             language=language,
+            pipeline_mode=pipeline_mode,
         )
 
 

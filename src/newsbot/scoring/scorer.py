@@ -1,7 +1,13 @@
-"""Scorer — uses the Claude API to score RawItems on 4 axes and produce ScoredItems.
+"""Scorer — uses the Claude API to score RawItems and produce ScoredItems.
 
-Prompt: src/newsbot/generation/prompts/scorer.md
-Response format: JSON (impact, freshness, practical_value, content_potential, score, reason)
+Prompts: src/newsbot/generation/prompts/scorer_{news,new_paper,classic_paper}.md
+Response format: JSON with mode-specific axes + score + reason
+
+Token optimisation:
+  - Each prompt file is split on ---ITEM--- into a static (cached) block and a
+    dynamic (item-specific) block.  The static block is sent with
+    cache_control=ephemeral so repeated calls within the same run share the
+    cache, cutting input tokens for the static part by ~90%.
 """
 
 from __future__ import annotations
@@ -18,42 +24,63 @@ from newsbot.models import RawItem, ScoredItem
 
 logger = logging.getLogger(__name__)
 
-_PROMPT_PATH = Path(__file__).parent.parent / "generation" / "prompts" / "scorer.md"
+_PROMPT_DIR = Path(__file__).parent.parent / "generation" / "prompts"
 
-# Sonnet 4.6 — balanced speed / cost
+_PROMPT_MAP: dict[str, str] = {
+    "news": "scorer_news.md",
+    "new_paper": "scorer_new_paper.md",
+    "classic_paper": "scorer_classic_paper.md",
+}
+
 _MODEL = "claude-sonnet-4-6"
 _MAX_TOKENS = 256
-_TEMPERATURE = 0.2  # low temperature for consistent scoring
+_TEMPERATURE = 0.2
 
 
-def _load_prompt() -> str:
-    return _PROMPT_PATH.read_text(encoding="utf-8")
+def _load_prompt(pipeline_mode: str) -> tuple[str, str]:
+    """Return (static_part, dynamic_template) split on the ---ITEM--- marker."""
+    filename = _PROMPT_MAP.get(pipeline_mode, _PROMPT_MAP["news"])
+    text = (_PROMPT_DIR / filename).read_text(encoding="utf-8")
+    if "---ITEM---" not in text:
+        return text, ""
+    static, dynamic = text.split("---ITEM---", 1)
+    return static.strip(), dynamic.strip()
 
 
-def _build_prompt(item: RawItem) -> str:
-    template = _load_prompt()
-    return (
-        template
+def _build_content(
+    static: str, dynamic_template: str, item: RawItem
+) -> list[dict]:
+    """Build the message content array with the static block cached."""
+    dynamic = (
+        dynamic_template
         .replace("{{title}}", item.title)
         .replace("{{source}}", item.source)
-        .replace("{{body}}", item.body[:800])  # trim to save tokens
+        .replace("{{body}}", item.body[:800])
     )
+    if not static:
+        return [{"type": "text", "text": dynamic}]
+    return [
+        {
+            "type": "text",
+            "text": static,
+            "cache_control": {"type": "ephemeral"},
+        },
+        {"type": "text", "text": dynamic},
+    ]
 
 
 def _parse_response(text: str) -> dict:
-    """Extract JSON from Claude's response. Handles markdown fences."""
-    # strip ```json ... ``` or ``` ... ```
     cleaned = re.sub(r"```(?:json)?\s*", "", text).replace("```", "").strip()
     return json.loads(cleaned)
 
 
 def _validate_scores(data: dict) -> None:
-    for key in ("impact", "freshness", "practical_value", "content_potential", "score"):
-        val = data.get(key)
-        if val is None:
+    for key in ("score", "reason"):
+        if data.get(key) is None:
             raise ValueError(f"missing key: {key}")
-        if not (1.0 <= float(val) <= 10.0):
-            raise ValueError(f"{key}={val} out of range [1.0, 10.0]")
+    score = float(data["score"])
+    if not (1.0 <= score <= 10.0):
+        raise ValueError(f"score={score} out of range [1.0, 10.0]")
     if not data.get("reason"):
         raise ValueError("missing reason")
 
@@ -66,10 +93,13 @@ class Scorer:
         api_key: str,
         model: str = _MODEL,
         concurrency: int = 5,
+        pipeline_mode: str = "news",
     ) -> None:
         self._client = anthropic.AsyncAnthropic(api_key=api_key)
         self._model = model
         self._semaphore = asyncio.Semaphore(concurrency)
+        self._pipeline_mode = pipeline_mode
+        self._static, self._dynamic_tpl = _load_prompt(pipeline_mode)
 
     async def score_all(self, items: list[RawItem]) -> list[ScoredItem]:
         """Score all items in parallel. Failed items fall back to a default score."""
@@ -85,18 +115,18 @@ class Scorer:
                 scored.append(result)
 
         scored.sort(key=lambda s: s.score, reverse=True)
-        logger.info("[scorer] scored %d items", len(scored))
+        logger.info("[scorer] scored %d items (mode=%s)", len(scored), self._pipeline_mode)
         return scored
 
     async def _score_one(self, item: RawItem) -> ScoredItem:
         async with self._semaphore:
-            prompt = _build_prompt(item)
+            content = _build_content(self._static, self._dynamic_tpl, item)
             try:
                 message = await self._client.messages.create(
                     model=self._model,
                     max_tokens=_MAX_TOKENS,
                     temperature=_TEMPERATURE,
-                    messages=[{"role": "user", "content": prompt}],
+                    messages=[{"role": "user", "content": content}],
                 )
             except anthropic.APIError as exc:
                 logger.warning("[scorer] API error for '%s': %s", item.title, exc)
@@ -121,8 +151,6 @@ class Scorer:
 
     @staticmethod
     def _fallback(item: RawItem) -> ScoredItem:
-        """Estimate a score from raw_score when the API is unavailable."""
-        # map raw_score (e.g. HN points) to 1–10: 500 pts → 10
         estimated = min(10.0, max(1.0, item.raw_score / 50.0))
         return ScoredItem(
             raw=item,
