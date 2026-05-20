@@ -5,7 +5,7 @@ env:
 
 on:
   schedule:
-    - cron: "0 9 * * 2"   # 화요일 09:00 UTC (18:00 KST)
+    - cron: "0 17 * * *"  # 매일 19:00 CEST (UTC+2) / 18:00 CET (UTC+1)
   workflow_dispatch:
     inputs:
       dry_run:
@@ -86,7 +86,7 @@ jobs:
           ANALYSIS_MODE: ${{ github.event.inputs.analysis_mode || 'detail' }}
           ANTHROPIC_MAIN_MODEL: ${{ github.event.inputs.main_model || 'claude-sonnet-4-6' }}
           ANTHROPIC_QUALITY_MODEL: "claude-haiku-4-5-20251001"
-          ITEMS_PER_NEW_PAPER: "5"
+          ITEMS_PER_NEW_PAPER: "4"
           CONTENT_TOPIC: "AI/ML"
           QUALITY_MIN_SCORE: "0.8"
           DEDUP_SIMILARITY_THRESHOLD: "0.92"
