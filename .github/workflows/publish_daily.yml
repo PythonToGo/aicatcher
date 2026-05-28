@@ -4,9 +4,8 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 on:
-  schedule:
-    - cron: "0 6 * * *"    # 08:00 CEST (UTC+2) / 07:00 CET (UTC+1)
-    - cron: "0 17 * * *"   # 19:00 CEST (UTC+2) / 18:00 CET (UTC+1)
+  # schedule 제거 — GitHub Actions 스케줄러 지연 문제로 cron-job.org가 대신 트리거
+  # cron-job.org → POST /repos/PythonToGo/aicatcher/actions/workflows/publish_daily.yml/dispatches
   workflow_dispatch:
     inputs:
       dry_run:
