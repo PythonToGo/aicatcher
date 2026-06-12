@@ -70,7 +70,7 @@ class AnalyzedItem:
 
 @dataclass
 class Report:
-    report_id: str              # YYYYMMDD-HHMM
+    report_id: str              # YYYYMMDD-HHMMSS
     items: list[AnalyzedItem]
     headline: str
     trend_analysis: str

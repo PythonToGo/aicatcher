@@ -160,7 +160,10 @@ def _validate_synthesis(data: dict) -> None:
 
 
 def _make_report_id() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")
+    # YYYYMMDD-HHMMSS — date + full timestamp so the time slot can't be
+    # mistaken for a month-day (e.g. "0602") and stays unique across the
+    # multiple daily runs.
+    return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
 
 
 def _max_tokens_for(pipeline_mode: str, mode: str) -> int:

@@ -123,7 +123,7 @@ class MockSynthesizer:
         if not items:
             raise ValueError("cannot synthesize an empty item list")
 
-        rid = report_id or datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")
+        rid = report_id or datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
         logger.info("[MOCK] synthesizing %d items → report %s (no API call)", len(items), rid)
 
         top_sources = list({item.scored.raw.source for item in items})

@@ -1,5 +1,5 @@
 name: Publish Weekly Classic Paper
-
+# https://console.cron-job.org/dashboard
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
